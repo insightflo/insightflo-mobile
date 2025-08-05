@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/news_provider.dart';
+import 'package:insightflo_app/features/news/presentation/providers/news_provider.dart';
 import 'news_card.dart';
 
 /// Custom widget for displaying a scrollable list of news articles

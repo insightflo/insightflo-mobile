@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../../../../core/errors/exceptions.dart';
-import '../../../../core/errors/failures.dart';
-import '../../domain/entities/user.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../../domain/value_objects/email.dart';
-import '../../domain/value_objects/password.dart';
+import 'package:insightflo_app/core/errors/exceptions.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
+import 'package:insightflo_app/features/auth/domain/entities/user.dart';
+import 'package:insightflo_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:insightflo_app/features/auth/domain/value_objects/email.dart';
+import 'package:insightflo_app/features/auth/domain/value_objects/password.dart';
 import '../datasources/auth_remote_data_source.dart';
 import '../models/user_model.dart';
 

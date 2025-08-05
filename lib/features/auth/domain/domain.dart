@@ -14,4 +14,4 @@ export 'value_objects/password.dart';
 export 'repositories/auth_repository.dart';
 
 // Core Failures (re-exported for convenience)
-export '../../../core/errors/failures.dart';
+export 'package:insightflo_app/core/errors/failures.dart';

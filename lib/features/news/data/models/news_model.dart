@@ -1,5 +1,5 @@
 import 'dart:convert';
-import '../../domain/entities/news_entity.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_entity.dart';
 
 /// Data model for news articles with JSON serialization support
 /// Maps between API responses and domain entities

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../../features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
 import 'deep_link_service.dart';
 
 /// Authentication flow manager that orchestrates authentication flows

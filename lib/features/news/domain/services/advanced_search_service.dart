@@ -1,8 +1,8 @@
 import 'dart:math';
 
-import '../../data/models/news_model.dart';
-import '../../data/datasources/news_local_data_source.dart';
-import '../../data/datasources/news_remote_data_source.dart';
+import 'package:insightflo_app/features/news/data/models/news_model.dart';
+import 'package:insightflo_app/features/news/data/datasources/news_local_data_source.dart';
+import 'package:insightflo_app/features/news/data/datasources/news_remote_data_source.dart';
 import '../models/search_filter.dart';
 
 // SearchFilter is now imported from separate model file

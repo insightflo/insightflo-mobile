@@ -7,15 +7,16 @@ import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 
 import 'tables/news_table.dart';
 import 'tables/sync_metadata_table.dart';
-import '../constants/app_constants.dart';
-import '../monitoring/performance_monitor.dart';
+import 'tables/keywords_table.dart';
+import 'package:insightflo_app/core/constants/app_constants.dart';
+import 'package:insightflo_app/core/monitoring/performance_monitor.dart';
 
 // Include generated code
 part 'app_database.g.dart';
 
 /// Main application database using Drift ORM
 /// Manages news articles and user data with Clean Architecture principles
-@DriftDatabase(tables: [NewsTable, SyncMetadataTable])
+@DriftDatabase(tables: [NewsTable, SyncMetadataTable, KeywordsTable])
 class AppDatabase extends _$AppDatabase {
   /// Database instance
   AppDatabase() : super(_openConnection());
@@ -25,7 +26,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Current database schema version
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// Database migration strategy
   @override
@@ -34,33 +35,41 @@ class AppDatabase extends _$AppDatabase {
       // Called when the database is first created
       onCreate: (Migrator m) async {
         await m.createAll();
-        
+
         // Create custom indexes for performance optimization
         await customStatement(NewsTableIndexes.freshArticlesIndex);
         await customStatement(NewsTableIndexes.searchIndex);
         await customStatement(NewsTableIndexes.positiveSentimentIndex);
         await customStatement(NewsTableIndexes.negativeSentimentIndex);
-        
+
         // Create sync metadata indexes
         await customStatement(SyncMetadataTableIndexes.tableNameIndex);
         await customStatement(SyncMetadataTableIndexes.syncStatusIndex);
         await customStatement(SyncMetadataTableIndexes.lastSyncTimeIndex);
         await customStatement(SyncMetadataTableIndexes.tableNameDirectionIndex);
+
+        // Create keywords indexes
+        await customStatement(KeywordsTableIndexes.userIdIndex);
+        await customStatement(KeywordsTableIndexes.keywordIndex);
+        await customStatement(KeywordsTableIndexes.userKeywordIndex);
+        await customStatement(KeywordsTableIndexes.weightIndex);
       },
-      
+
       // Called when upgrading from an older schema version
       onUpgrade: (Migrator m, int from, int to) async {
         // Migration from version 1 to 2: Add sync_metadata table
         if (from < 2) {
           // Create the sync_metadata table
           await m.createTable(syncMetadataTable);
-          
+
           // Create sync metadata indexes
           await customStatement(SyncMetadataTableIndexes.tableNameIndex);
           await customStatement(SyncMetadataTableIndexes.syncStatusIndex);
           await customStatement(SyncMetadataTableIndexes.lastSyncTimeIndex);
-          await customStatement(SyncMetadataTableIndexes.tableNameDirectionIndex);
-          
+          await customStatement(
+            SyncMetadataTableIndexes.tableNameDirectionIndex,
+          );
+
           // Initialize sync metadata for existing news table
           final now = DateTime.now().millisecondsSinceEpoch;
           await into(syncMetadataTable).insert(
@@ -78,19 +87,21 @@ class AppDatabase extends _$AppDatabase {
             ),
           );
         }
-        
+
         // Migration from version 2 to 3: Fix sync_metadata table constraints
         if (from < 3) {
           // Drop and recreate sync_metadata table with fixed constraints
           await m.deleteTable('sync_metadata');
           await m.createTable(syncMetadataTable);
-          
+
           // Recreate sync metadata indexes
           await customStatement(SyncMetadataTableIndexes.tableNameIndex);
           await customStatement(SyncMetadataTableIndexes.syncStatusIndex);
           await customStatement(SyncMetadataTableIndexes.lastSyncTimeIndex);
-          await customStatement(SyncMetadataTableIndexes.tableNameDirectionIndex);
-          
+          await customStatement(
+            SyncMetadataTableIndexes.tableNameDirectionIndex,
+          );
+
           // Re-initialize sync metadata for existing news table
           final now = DateTime.now().millisecondsSinceEpoch;
           await into(syncMetadataTable).insert(
@@ -108,19 +119,31 @@ class AppDatabase extends _$AppDatabase {
             ),
           );
         }
+
+        // Migration from version 3 to 4: Add keywords table
+        if (from < 4) {
+          // Create the keywords table
+          await m.createTable(keywordsTable);
+
+          // Create keywords indexes
+          await customStatement(KeywordsTableIndexes.userIdIndex);
+          await customStatement(KeywordsTableIndexes.keywordIndex);
+          await customStatement(KeywordsTableIndexes.userKeywordIndex);
+          await customStatement(KeywordsTableIndexes.weightIndex);
+        }
       },
-      
+
       // Called before opening the database
       beforeOpen: (details) async {
         // Enable foreign key constraints
         await customStatement('PRAGMA foreign_keys = ON');
-        
+
         // Configure SQLite for better performance
         await customStatement('PRAGMA journal_mode = WAL');
         await customStatement('PRAGMA synchronous = NORMAL');
         await customStatement('PRAGMA cache_size = 10000');
         await customStatement('PRAGMA temp_store = MEMORY');
-        
+
         // Set a reasonable busy timeout
         await customStatement('PRAGMA busy_timeout = 30000');
       },
@@ -171,11 +194,13 @@ class AppDatabase extends _$AppDatabase {
         final twentyFourHoursAgo = DateTime.now()
             .subtract(const Duration(hours: 24))
             .millisecondsSinceEpoch;
-        
+
         return await (select(newsTable)
-              ..where((tbl) => 
-                  tbl.userId.equals(userId) & 
-                  tbl.cachedAt.isBiggerThanValue(twentyFourHoursAgo))
+              ..where(
+                (tbl) =>
+                    tbl.userId.equals(userId) &
+                    tbl.cachedAt.isBiggerThanValue(twentyFourHoursAgo),
+              )
               ..orderBy([(t) => OrderingTerm.desc(t.publishedAt)])
               ..limit(limit))
             .get();
@@ -200,13 +225,15 @@ class AppDatabase extends _$AppDatabase {
       'search_news',
       () async {
         final searchPattern = '%$query%';
-        
+
         return await (select(newsTable)
-              ..where((tbl) => 
-                  tbl.userId.equals(userId) &
-                  (tbl.title.like(searchPattern) | 
-                   tbl.summary.like(searchPattern) |
-                   tbl.keywords.like(searchPattern)))
+              ..where(
+                (tbl) =>
+                    tbl.userId.equals(userId) &
+                    (tbl.title.like(searchPattern) |
+                        tbl.summary.like(searchPattern) |
+                        tbl.keywords.like(searchPattern)),
+              )
               ..orderBy([
                 (t) => OrderingTerm.desc(t.publishedAt),
                 (t) => OrderingTerm.desc(t.sentimentScore),
@@ -231,9 +258,9 @@ class AppDatabase extends _$AppDatabase {
     int limit = AppConstants.defaultPageSize,
   }) async {
     return await (select(newsTable)
-          ..where((tbl) => 
-              tbl.userId.equals(userId) & 
-              tbl.isBookmarked.equals(1))
+          ..where(
+            (tbl) => tbl.userId.equals(userId) & tbl.isBookmarked.equals(1),
+          )
           ..orderBy([(t) => OrderingTerm.desc(t.publishedAt)])
           ..limit(limit))
         .get();
@@ -248,9 +275,11 @@ class AppDatabase extends _$AppDatabase {
     int limit = AppConstants.defaultPageSize,
   }) async {
     return await (select(newsTable)
-          ..where((tbl) => 
-              tbl.userId.equals(userId) &
-              tbl.sentimentScore.isBetweenValues(minSentiment, maxSentiment))
+          ..where(
+            (tbl) =>
+                tbl.userId.equals(userId) &
+                tbl.sentimentScore.isBetweenValues(minSentiment, maxSentiment),
+          )
           ..orderBy([(t) => OrderingTerm.desc(t.publishedAt)])
           ..limit(limit))
         .get();
@@ -287,17 +316,16 @@ class AppDatabase extends _$AppDatabase {
     required String userId,
     required bool isBookmarked,
   }) async {
-    final result = await (update(newsTable)
-          ..where((tbl) => 
-              tbl.id.equals(articleId) & 
-              tbl.userId.equals(userId)))
-        .write(NewsTableCompanion(
-          isBookmarked: Value(isBookmarked ? 1 : 0),
-        ));
-    
+    final result =
+        await (update(newsTable)..where(
+              (tbl) => tbl.id.equals(articleId) & tbl.userId.equals(userId),
+            ))
+            .write(
+              NewsTableCompanion(isBookmarked: Value(isBookmarked ? 1 : 0)),
+            );
+
     return result > 0;
   }
-
 
   /// Gets database statistics for monitoring
   Future<Map<String, int>> getDatabaseStats({required String userId}) async {
@@ -317,9 +345,11 @@ class AppDatabase extends _$AppDatabase {
       'SELECT COUNT(*) as count FROM news_articles WHERE user_id = ? AND cached_at > ?',
       variables: [
         Variable.withString(userId),
-        Variable.withInt(DateTime.now()
-            .subtract(const Duration(hours: 24))
-            .millisecondsSinceEpoch),
+        Variable.withInt(
+          DateTime.now()
+              .subtract(const Duration(hours: 24))
+              .millisecondsSinceEpoch,
+        ),
       ],
       readsFrom: {newsTable},
     ).getSingle();
@@ -343,11 +373,13 @@ class AppDatabase extends _$AppDatabase {
   }) async {
     final startTimestamp = startDate.millisecondsSinceEpoch;
     final endTimestamp = endDate.millisecondsSinceEpoch;
-    
+
     return await (select(newsTable)
-          ..where((tbl) => 
-              tbl.userId.equals(userId) &
-              tbl.publishedAt.isBetweenValues(startTimestamp, endTimestamp))
+          ..where(
+            (tbl) =>
+                tbl.userId.equals(userId) &
+                tbl.publishedAt.isBetweenValues(startTimestamp, endTimestamp),
+          )
           ..orderBy([(t) => OrderingTerm.desc(t.publishedAt)])
           ..limit(limit))
         .get();
@@ -361,9 +393,11 @@ class AppDatabase extends _$AppDatabase {
     int limit = AppConstants.defaultPageSize,
   }) async {
     return await (select(newsTable)
-          ..where((tbl) => 
-              tbl.userId.equals(userId) &
-              tbl.sentimentLabel.equals(sentimentLabel))
+          ..where(
+            (tbl) =>
+                tbl.userId.equals(userId) &
+                tbl.sentimentLabel.equals(sentimentLabel),
+          )
           ..orderBy([
             (t) => OrderingTerm.desc(t.sentimentScore),
             (t) => OrderingTerm.desc(t.publishedAt),
@@ -392,20 +426,21 @@ class AppDatabase extends _$AppDatabase {
       ORDER BY article_count DESC, avg_sentiment DESC
       LIMIT ?
       ''',
-      variables: [
-        Variable.withString(userId),
-        Variable.withInt(limit),
-      ],
+      variables: [Variable.withString(userId), Variable.withInt(limit)],
       readsFrom: {newsTable},
     ).get();
 
-    return result.map((row) => {
-      'source': row.data['source'] as String,
-      'articleCount': row.data['article_count'] as int,
-      'avgSentiment': (row.data['avg_sentiment'] as double?) ?? 0.0,
-      'bookmarkedCount': row.data['bookmarked_count'] as int,
-      'latestArticleDate': row.data['latest_article_date'] as int,
-    }).toList();
+    return result
+        .map(
+          (row) => {
+            'source': row.data['source'] as String,
+            'articleCount': row.data['article_count'] as int,
+            'avgSentiment': (row.data['avg_sentiment'] as double?) ?? 0.0,
+            'bookmarkedCount': row.data['bookmarked_count'] as int,
+            'latestArticleDate': row.data['latest_article_date'] as int,
+          },
+        )
+        .toList();
   }
 
   // Batch operations for high-performance data manipulation
@@ -420,20 +455,22 @@ class AppDatabase extends _$AppDatabase {
 
     return await transaction(() async {
       int updatedCount = 0;
-      
+
       // Process updates in batches of 100 for optimal performance
       final entries = sentimentUpdates.entries.toList();
       const batchSize = 100;
-      
+
       for (int i = 0; i < entries.length; i += batchSize) {
-        final batchEnd = (i + batchSize < entries.length) ? i + batchSize : entries.length;
+        final batchEnd = (i + batchSize < entries.length)
+            ? i + batchSize
+            : entries.length;
         final batch = entries.sublist(i, batchEnd);
-        
+
         await this.batch((batchWriter) {
           for (final entry in batch) {
             final articleId = entry.key;
             final sentimentScore = entry.value;
-            
+
             // Determine sentiment label based on score
             String sentimentLabel;
             if (sentimentScore >= 0.1) {
@@ -443,23 +480,22 @@ class AppDatabase extends _$AppDatabase {
             } else {
               sentimentLabel = 'neutral';
             }
-            
+
             batchWriter.update(
               newsTable,
               NewsTableCompanion(
                 sentimentScore: Value(sentimentScore),
                 sentimentLabel: Value(sentimentLabel),
               ),
-              where: (tbl) => 
-                  tbl.id.equals(articleId) & 
-                  tbl.userId.equals(userId),
+              where: (tbl) =>
+                  tbl.id.equals(articleId) & tbl.userId.equals(userId),
             );
           }
         });
-        
+
         updatedCount += batch.length;
       }
-      
+
       return updatedCount;
     });
   }
@@ -476,7 +512,7 @@ class AppDatabase extends _$AppDatabase {
       final sevenDaysAgo = DateTime.now()
           .subtract(Duration(days: retentionDays))
           .millisecondsSinceEpoch;
-      
+
       // First, get articles to keep (either within 7 days OR in top 1000 recent)
       final articlesToKeep = await customSelect(
         '''
@@ -502,7 +538,7 @@ class AppDatabase extends _$AppDatabase {
       final idsToKeep = articlesToKeep
           .map((row) => row.data['id'] as String)
           .toList();
-      
+
       // Delete articles not in the keep list
       final placeholders = List.filled(idsToKeep.length, '?').join(',');
       final deleteCount = await customUpdate(
@@ -526,42 +562,44 @@ class AppDatabase extends _$AppDatabase {
       'optimize_database',
       () async {
         final stopwatch = Stopwatch()..start();
-        
+
         try {
           // Get database size before optimization
           final sizeBefore = await customSelect(
             'PRAGMA page_count',
             readsFrom: {},
           ).getSingle();
-          
+
           // Run VACUUM to reclaim space and defragment
           await customStatement('VACUUM');
-          
+
           // Update table statistics for query optimizer
           await customStatement('ANALYZE');
-          
+
           // Reindex all indexes for optimal performance
           await customStatement('REINDEX');
-          
+
           // Get database size after optimization
           final sizeAfter = await customSelect(
             'PRAGMA page_count',
             readsFrom: {},
           ).getSingle();
-          
+
           stopwatch.stop();
-          
+
           final pagesBefore = sizeBefore.data['page_count'] as int;
           final pagesAfter = sizeAfter.data['page_count'] as int;
           final spaceReclaimed = pagesBefore - pagesAfter;
-          
+
           return {
             'success': true,
             'durationMs': stopwatch.elapsedMilliseconds,
             'pagesBefore': pagesBefore,
             'pagesAfter': pagesAfter,
             'spaceReclaimed': spaceReclaimed,
-            'compressionRatio': pagesBefore > 0 ? (spaceReclaimed / pagesBefore) : 0.0,
+            'compressionRatio': pagesBefore > 0
+                ? (spaceReclaimed / pagesBefore)
+                : 0.0,
           };
         } catch (e) {
           stopwatch.stop();
@@ -651,13 +689,16 @@ class AppDatabase extends _$AppDatabase {
     final id = '${tableName}_$syncDirection';
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    final result = await (update(syncMetadataTable)
-          ..where((tbl) => tbl.id.equals(id)))
-        .write(SyncMetadataTableCompanion(
-          syncStatus: Value(syncStatus),
-          updatedAt: Value(now),
-          errorMessage: Value(errorMessage),
-        ));
+    final result =
+        await (update(
+          syncMetadataTable,
+        )..where((tbl) => tbl.id.equals(id))).write(
+          SyncMetadataTableCompanion(
+            syncStatus: Value(syncStatus),
+            updatedAt: Value(now),
+            errorMessage: Value(errorMessage),
+          ),
+        );
 
     return result > 0;
   }
@@ -666,9 +707,7 @@ class AppDatabase extends _$AppDatabase {
   Future<List<SyncMetadataData>> getStaleSyncMetadata({
     required Duration maxAge,
   }) async {
-    final cutoffTime = DateTime.now()
-        .subtract(maxAge)
-        .millisecondsSinceEpoch;
+    final cutoffTime = DateTime.now().subtract(maxAge).millisecondsSinceEpoch;
 
     return await (select(syncMetadataTable)
           ..where((tbl) => tbl.lastSyncTime.isSmallerThanValue(cutoffTime))
@@ -679,7 +718,7 @@ class AppDatabase extends _$AppDatabase {
   /// Gets sync statistics for all tables
   Future<Map<String, dynamic>> getSyncStatistics() async {
     final allMetadata = await select(syncMetadataTable).get();
-    
+
     final stats = <String, dynamic>{
       'totalTables': <String>{}.length,
       'byStatus': <String, int>{},
@@ -697,14 +736,14 @@ class AppDatabase extends _$AppDatabase {
     for (final metadata in allMetadata) {
       tableNames.add(metadata.syncTableName);
       totalRecords += metadata.recordCount;
-      
+
       if (metadata.lastSyncTime > latestSyncTime) {
         latestSyncTime = metadata.lastSyncTime;
       }
-      
-      statusCounts[metadata.syncStatus] = 
+
+      statusCounts[metadata.syncStatus] =
           (statusCounts[metadata.syncStatus] ?? 0) + 1;
-      
+
       if (metadata.syncStatus == 'failed' && metadata.errorMessage != null) {
         failedSyncs.add({
           'tableName': metadata.syncTableName,
@@ -725,18 +764,110 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Cleans up old sync metadata records
-  Future<int> cleanupSyncMetadata({
-    required Duration retentionPeriod,
-  }) async {
+  Future<int> cleanupSyncMetadata({required Duration retentionPeriod}) async {
     final cutoffTime = DateTime.now()
         .subtract(retentionPeriod)
         .millisecondsSinceEpoch;
 
-    return await (delete(syncMetadataTable)
-          ..where((tbl) => 
+    return await (delete(syncMetadataTable)..where(
+          (tbl) =>
               tbl.updatedAt.isSmallerThanValue(cutoffTime) &
-              tbl.syncStatus.isNotValue('syncing'))) // Don't delete active syncs
+              tbl.syncStatus.isNotValue('syncing'),
+        )) // Don't delete active syncs
         .go();
+  }
+
+  // Keywords management methods
+
+  /// Gets all keywords for a user
+  Future<List<KeywordsTableData>> getKeywords({
+    required String userId,
+    int limit = 50,
+  }) async {
+    return await (select(keywordsTable)
+          ..where((tbl) => tbl.userId.equals(userId))
+          ..orderBy([(t) => OrderingTerm.desc(t.weight)])
+          ..limit(limit))
+        .get();
+  }
+
+  /// Creates a new keyword
+  Future<KeywordsTableData> createKeyword({
+    required String id,
+    required String userId,
+    required String keyword,
+    required double weight,
+    String? category,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    final companion = KeywordsTableCompanion.insert(
+      id: id,
+      userId: userId,
+      keyword: keyword,
+      weight: Value(weight),
+      category: category != null ? Value(category) : const Value.absent(),
+      createdAt: now,
+      updatedAt: Value(now),
+    );
+    
+    await into(keywordsTable).insert(companion);
+    
+    // Return the created keyword
+    return await (select(keywordsTable)..where((tbl) => tbl.id.equals(id))).getSingle();
+  }
+
+  /// Updates an existing keyword
+  Future<bool> updateKeyword({
+    required String id,
+    required String userId,
+    String? keyword,
+    double? weight,
+    String? category,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    
+    final companion = KeywordsTableCompanion(
+      keyword: keyword != null ? Value(keyword) : const Value.absent(),
+      weight: weight != null ? Value(weight) : const Value.absent(),
+      category: category != null ? Value(category) : const Value.absent(),
+      updatedAt: Value(now),
+    );
+    
+    final result = await (update(keywordsTable)
+          ..where((tbl) => tbl.id.equals(id) & tbl.userId.equals(userId)))
+        .write(companion);
+    
+    return result > 0;
+  }
+
+  /// Deletes a keyword
+  Future<bool> deleteKeyword({
+    required String keywordId,
+    required String userId,
+  }) async {
+    final result = await (delete(keywordsTable)
+          ..where((tbl) => tbl.id.equals(keywordId) & tbl.userId.equals(userId)))
+        .go();
+    
+    return result > 0;
+  }
+
+  /// Searches for keyword suggestions (returns existing keywords matching query)
+  Future<List<String>> searchKeywordSuggestions({
+    required String userId,
+    required String query,
+    int limit = 10,
+  }) async {
+    final searchPattern = '%$query%';
+    
+    final results = await (select(keywordsTable)
+          ..where((tbl) => tbl.userId.equals(userId) & tbl.keyword.like(searchPattern))
+          ..orderBy([(t) => OrderingTerm.desc(t.weight)])
+          ..limit(limit))
+        .get();
+    
+    return results.map((row) => row.keyword).toList();
   }
 }
 
@@ -747,7 +878,7 @@ LazyDatabase _openConnection() {
     if (Platform.isAndroid) {
       await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
     }
-    
+
     // Use sqlite3_flutter_libs for better performance
     // Removed sqlite3.tempDirectory as it's not needed
 

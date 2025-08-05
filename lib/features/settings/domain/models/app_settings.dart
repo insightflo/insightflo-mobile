@@ -102,7 +102,7 @@ class AppSettings {
       'themeMode': themeMode.index,
       'useDynamicColors': useDynamicColors,
       'fontScale': fontScale,
-      'customSeedColor': customSeedColor?.value,
+      'customSeedColor': customSeedColor?.toARGB32(),
       'useHighContrast': useHighContrast,
       'pushNotifications': pushNotifications,
       'breakingNewsAlerts': breakingNewsAlerts,

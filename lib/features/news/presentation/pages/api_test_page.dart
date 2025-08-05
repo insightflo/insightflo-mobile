@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../../../../core/services/api_auth_service.dart';
-import '../../data/models/news_article_model.dart';
+import 'package:insightflo_app/core/services/api_auth_service.dart';
+import 'package:insightflo_app/features/news/data/models/news_article_model.dart';
 import 'dart:convert';
 
 /// 간단한 API 테스트 페이지

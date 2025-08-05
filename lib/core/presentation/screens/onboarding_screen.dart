@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
 
 /// 온보딩 화면
 /// 

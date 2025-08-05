@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../../domain/entities/news_entity.dart';
-import '../../data/models/news_model.dart';
-import '../../data/datasources/news_local_data_source.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../domain/entities/user_keyword.dart';
-import '../../domain/usecases/get_personalized_news.dart';
-import '../../domain/usecases/search_news.dart';
-import '../../domain/usecases/bookmark_article.dart';
-import '../../../../core/utils/logger.dart';
-import '../../../../core/services/api_auth_service.dart';
+import 'package:insightflo_app/core/utils/logger.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_entity.dart';
+import 'package:insightflo_app/features/news/data/models/news_model.dart';
+import 'package:insightflo_app/features/news/data/datasources/news_local_data_source.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/keywords/presentation/providers/keyword_provider.dart';
+import 'package:insightflo_app/features/keywords/domain/entities/keyword_entity.dart';
+import 'package:insightflo_app/features/news/domain/entities/user_keyword.dart';
+import 'package:insightflo_app/features/news/domain/usecases/get_personalized_news.dart';
+import 'package:insightflo_app/features/news/domain/usecases/search_news.dart';
+import 'package:insightflo_app/features/news/domain/usecases/bookmark_article.dart';
+import 'package:insightflo_app/core/services/api_auth_service.dart';
 
 /// State management for news features using Provider with integrated Drift Database and Vercel API
 class NewsProvider extends ChangeNotifier {
@@ -19,6 +21,7 @@ class NewsProvider extends ChangeNotifier {
   final BookmarkArticle bookmarkArticle;
   final NewsLocalDataSource localDataSource;
   final AuthProvider authProvider;
+  final KeywordProvider keywordProvider;
   final ApiAuthService authService;
 
   NewsProvider({
@@ -27,6 +30,7 @@ class NewsProvider extends ChangeNotifier {
     required this.bookmarkArticle,
     required this.localDataSource,
     required this.authProvider,
+    required this.keywordProvider,
     required this.authService,
   });
 
@@ -117,65 +121,91 @@ class NewsProvider extends ChangeNotifier {
     bool refresh,
   ) async {
     try {
-      // Ensure we have an anonymous token before making API calls
-      if (!authService.isAuthenticated) {
-        AppLogger.info('No authentication found, attempting anonymous login');
-        await authService.signInAnonymously();
+      // Get local keywords for personalization
+      final keywords = await _getLocalKeywords();
+      final keywordParams = keywords.map((k) => k.keyword).join(',');
+      final weightParams = keywords.map((k) => k.weight.toString()).join(',');
+
+      // Build URL with keyword parameters for personalized news
+      final queryParams = <String, String>{
+        'page': _currentPage.toString(),
+        'limit': '20',
+      };
+      
+      // Add keywords for personalization if available
+      if (keywordParams.isNotEmpty) {
+        queryParams['keywords'] = keywordParams;
+        queryParams['weights'] = weightParams;
       }
 
-      // 페이지네이션을 위해 API 호출에 현재 페이지 번호를 추가합니다.
-      final uri = Uri.parse(
-        'http://127.0.0.1:3000/api/news?page=$_currentPage',
+      final uri = Uri.parse('http://127.0.0.1:3000/api/keywords').replace(
+        queryParameters: queryParams,
       );
-      // Call local API endpoint (using 127.0.0.1 for Windows compatibility)
+      
+      AppLogger.info('Fetching personalized news with keywords: $keywordParams');
+
+      // Call news API endpoint without authentication (guest-first)
       final response = await http.get(
         uri,
-        headers: authService.getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
       );
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        final List<dynamic> articlesJson = jsonData['articles'] ?? [];
+        
+        // Handle new API response structure: {success: true, data: {articles: [...], total: n}}
+        if (jsonData['success'] == true && jsonData['data'] != null) {
+          final data = jsonData['data'];
+          final List<dynamic> articlesJson = data['articles'] ?? [];
+          
+          AppLogger.info('Received ${articlesJson.length} articles from personalized news API');
 
-        // API가 빈 목록을 반환하면 더 이상 데이터가 없는 것으로 간주합니다.
-        if (articlesJson.isEmpty) {
-          _hasMoreData = false;
-          _setLoading(false, false);
-          return;
-        }
+          // API가 빈 목록을 반환하면 더 이상 데이터가 없는 것으로 간주합니다.
+          if (articlesJson.isEmpty) {
+            _hasMoreData = false;
+            _setLoading(false, false);
+            return;
+          }
 
-        // Convert API response to NewsModel objects
-        final newsModels = articlesJson.map((articleJson) {
-          // Ensure all required fields are present with proper structure
-          final processedJson = _processVercelApiResponse(articleJson, userId);
-          return NewsModel.fromJson(processedJson);
-        }).toList();
+          // Convert API response to NewsModel objects
+          final newsModels = articlesJson.map((articleJson) {
+            // Ensure all required fields are present with proper structure
+            final processedJson = _processVercelApiResponse(articleJson, userId);
+            return NewsModel.fromJson(processedJson);
+          }).toList();
 
-        // Cache all articles in Drift Database
-        await localDataSource.batchCacheNewsArticles(newsModels);
+          // Cache all articles in Drift Database
+          await localDataSource.batchCacheNewsArticles(newsModels);
 
-        // Update UI state with null safety
-        final safeNewsModels = newsModels
-            .where((model) => model != null)
-            .cast<NewsEntity>()
-            .toList();
+          // Update UI state with null safety
+          final safeNewsModels = newsModels
+              .where((model) => model != null)
+              .cast<NewsEntity>()
+              .toList();
 
-        if (refresh) {
-          _articles = safeNewsModels;
+          if (refresh) {
+            _articles = safeNewsModels;
+          } else {
+            // 중복 기사를 방지하기 위해 이미 목록에 없는 기사만 추가합니다.
+            final existingIds = _articles.map((a) => a.id).toSet();
+            final newArticles = safeNewsModels.where(
+              (a) => !existingIds.contains(a.id),
+            );
+            _articles.addAll(newArticles);
+          }
+
+          _isOfflineMode = false;
+          _currentPage++;
+          _clearError();
         } else {
-          // 중복 기사를 방지하기 위해 이미 목록에 없는 기사만 추가합니다.
-          final existingIds = _articles.map((a) => a.id).toSet();
-          final newArticles = safeNewsModels.where(
-            (a) => !existingIds.contains(a.id),
-          );
-          _articles.addAll(newArticles);
+          // API response format error
+          throw Exception('Invalid API response format: ${jsonData.toString()}');
         }
-
-        _isOfflineMode = false;
-        _currentPage++;
-        _clearError();
       } else {
-        throw Exception('API call failed with status: ${response.statusCode}');
+        throw Exception('API call failed with status: ${response.statusCode}, body: ${response.body}');
       }
     } catch (e, stackTrace) {
       // Log the actual error for debugging
@@ -414,6 +444,19 @@ class NewsProvider extends ChangeNotifier {
     }
   }
 
+  /// Refresh news data when keywords are changed
+  Future<void> refreshNewsOnKeywordChange(String userId) async {
+    AppLogger.info('NewsProvider: Refreshing news due to keyword change');
+    
+    // Clear search query to show personalized news with new keywords
+    _searchQuery = '';
+    
+    // Refresh personalized news with updated keywords
+    await getPersonalizedNewsForUser(userId, refresh: true);
+    
+    AppLogger.info('NewsProvider: News refresh completed after keyword change');
+  }
+
   /// Load more news data
   Future<void> loadMoreNews(String userId) async {
     if (_searchQuery.isNotEmpty) {
@@ -465,5 +508,21 @@ class NewsProvider extends ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  /// Get local keywords for personalization
+  /// Returns local keywords from KeywordProvider or empty list if none found
+  Future<List<KeywordEntity>> _getLocalKeywords() async {
+    try {
+      // Get keywords from KeywordProvider
+      final keywords = keywordProvider.keywords;
+      
+      AppLogger.info('Found ${keywords.length} local keywords for personalization');
+      
+      return keywords;
+    } catch (e) {
+      AppLogger.warning('Failed to get local keywords: ${e.toString()}');
+      return [];
+    }
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
 
 /// 라우트 가드 타입
 enum GuardType {

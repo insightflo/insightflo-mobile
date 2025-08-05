@@ -9,6 +9,7 @@ import 'package:insightflo_app/features/news/domain/usecases/bookmark_article.da
 import 'package:insightflo_app/features/news/data/datasources/news_local_data_source.dart';
 import 'package:insightflo_app/features/news/presentation/providers/news_provider.dart';
 import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/keywords/presentation/providers/keyword_provider.dart';
 import 'package:insightflo_app/core/services/api_auth_service.dart';
 
 // Generate mocks
@@ -18,9 +19,14 @@ import 'package:insightflo_app/core/services/api_auth_service.dart';
   BookmarkArticle,
   NewsLocalDataSource,
   AuthProvider,
+  KeywordProvider,
   ApiAuthService,
 ])
+// Mock rebuild trigger
 import 'news_provider_test.mocks.dart';
+
+// Simple mock for KeywordProvider since MockKeywordProvider is not generated properly
+class MockKeywordProvider extends Mock implements KeywordProvider {}
 
 void main() {
   late NewsProvider provider;
@@ -29,6 +35,7 @@ void main() {
   late MockBookmarkArticle mockBookmarkArticle;
   late MockNewsLocalDataSource mockLocalDataSource;
   late MockAuthProvider mockAuthProvider;
+  late MockKeywordProvider mockKeywordProvider;
   late MockApiAuthService mockAuthService;
 
   setUp(() {
@@ -37,6 +44,7 @@ void main() {
     mockBookmarkArticle = MockBookmarkArticle();
     mockLocalDataSource = MockNewsLocalDataSource();
     mockAuthProvider = MockAuthProvider();
+    mockKeywordProvider = MockKeywordProvider();
     mockAuthService = MockApiAuthService();
 
     // Setup default ApiAuthService mock behavior - return false to skip API calls
@@ -53,6 +61,7 @@ void main() {
       bookmarkArticle: mockBookmarkArticle,
       localDataSource: mockLocalDataSource,
       authProvider: mockAuthProvider,
+      keywordProvider: mockKeywordProvider,
       authService: mockAuthService,
     );
   });
@@ -98,8 +107,8 @@ void main() {
         // Assert
         expect(provider.articles, equals(testNewsList));
         expect(provider.isLoading, isFalse);
-        // API calls are disabled in tests, so error will be set but data will be loaded from cache
-        expect(provider.error, contains('Network error'));
+        // Since we're mocking getFreshNews to return data, no error should occur
+        expect(provider.error, isNull);
       });
 
       test('should handle loading news failure', () async {
@@ -229,8 +238,8 @@ void main() {
         // Assert
         expect(provider.articles, equals(testNewsList));
         expect(provider.isLoading, isFalse);
-        // API calls are disabled in tests, so error will be set but data will be loaded from cache
-        expect(provider.error, contains('Network error'));
+        // Since we're mocking getFreshNews to return data, no error should occur
+        expect(provider.error, isNull);
       });
     });
 

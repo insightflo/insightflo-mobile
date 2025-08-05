@@ -4,8 +4,9 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import '../../../../core/errors/exceptions.dart';
-import '../../../../core/services/api_auth_service.dart';
+import 'package:insightflo_app/core/errors/exceptions.dart';
+import 'package:insightflo_app/core/services/api_auth_service.dart';
+import 'package:insightflo_app/core/utils/logger.dart';
 import '../models/user_model.dart';
 
 /// Abstract interface for authentication remote data source
@@ -51,6 +52,9 @@ abstract class AuthRemoteDataSource {
   Future<void> verifyEmail({
     required String token,
   });
+
+  /// Gets the stored authentication token
+  Future<String?> getStoredToken();
 }
 
 /// Implementation of AuthRemoteDataSource using API-First architecture
@@ -160,18 +164,39 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<UserModel?> getCurrentUser() async {
     try {
-      // API 기반 현재 사용자 조회 - ApiAuthService를 통해 구현
-      final token = _apiAuthService.currentToken;
-      if (token != null) {
-        // 임시로 익명 사용자 반환
-        return UserModel.fromJson({
-          'id': 'anonymous_user',
-          'email': null,
-          'isAnonymous': true,
-        });
+      // 먼저 기존 세션 복원 시도
+      await _apiAuthService.restoreSession();
+      
+      // 토큰이 없으면 익명 로그인 수행
+      if (!_apiAuthService.isAuthenticated) {
+        AppLogger.info('No existing session, performing anonymous login...');
+        final authResult = await _apiAuthService.signInAnonymously();
+        
+        if (authResult.success) {
+          AppLogger.info('Anonymous login successful');
+          return UserModel.fromJson({
+            'id': authResult.userId!,
+            'email': authResult.email ?? '',
+            'user_metadata': {'isAnonymous': authResult.isAnonymous},
+            'email_confirmed_at': null,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        } else {
+          AppLogger.error('Anonymous login failed: ${authResult.error}');
+          return null;
+        }
       }
-      return null;
+      
+      // 기존 토큰이 있으면 익명 사용자 반환
+      return UserModel.fromJson({
+        'id': _apiAuthService.currentUserId ?? 'anonymous_user',
+        'email': '',
+        'user_metadata': {'isAnonymous': true},
+        'email_confirmed_at': null,
+        'created_at': DateTime.now().toIso8601String(),
+      });
     } catch (e) {
+      AppLogger.error('Error getting current user', e);
       throw ServerException(
         message: 'Error getting current user: ${e.toString()}',
         statusCode: 500,
@@ -207,5 +232,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<void> verifyEmail({required String token}) async {
     // TODO: API 기반 이메일 인증 확인 구현
     throw UnimplementedError('Email verification confirmation not yet implemented for API-First architecture');
+  }
+
+  @override
+  Future<String?> getStoredToken() async {
+    try {
+      // ApiAuthService의 currentToken을 통해 저장된 토큰 반환
+      return _apiAuthService.currentToken;
+    } catch (e) {
+      throw ServerException(
+        message: 'Error getting stored token: ${e.toString()}',
+        statusCode: 500,
+      );
+    }
   }
 }

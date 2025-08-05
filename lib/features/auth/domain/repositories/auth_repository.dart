@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/errors/failures.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
 import '../entities/user.dart';
 import '../value_objects/email.dart';
 import '../value_objects/password.dart';

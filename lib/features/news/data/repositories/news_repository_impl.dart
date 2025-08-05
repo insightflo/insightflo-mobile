@@ -1,12 +1,12 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/errors/exceptions.dart';
-import '../../../../core/errors/failures.dart';
-import '../../../../core/utils/network_info.dart';
-import '../../../../core/cache/cache_service.dart';
-import '../../../../core/database/app_database.dart';
-import '../../domain/entities/news_article.dart';
-import '../../domain/entities/user_keyword.dart';
-import '../../domain/repositories/news_repository.dart';
+import 'package:insightflo_app/core/errors/exceptions.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
+import 'package:insightflo_app/core/utils/network_info.dart';
+import 'package:insightflo_app/core/cache/cache_service.dart';
+import 'package:insightflo_app/core/database/app_database.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_article.dart';
+import 'package:insightflo_app/features/news/domain/entities/user_keyword.dart';
+import 'package:insightflo_app/features/news/domain/repositories/news_repository.dart';
 import '../datasources/news_remote_data_source.dart';
 import '../datasources/news_local_data_source.dart';
 

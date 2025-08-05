@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 /// 페이지 전환 애니메이션 타입
 enum PageTransitionType {

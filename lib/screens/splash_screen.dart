@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
-import '../features/auth/presentation/providers/auth_provider.dart';
-import '../features/auth/presentation/pages/sign_in_page.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/auth/presentation/pages/sign_in_page.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {

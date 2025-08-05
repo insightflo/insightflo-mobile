@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/news_provider.dart';
-import '../../domain/entities/news_entity.dart';
-import '../../data/datasources/news_local_data_source.dart';
+import 'package:insightflo_app/features/news/presentation/providers/news_provider.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_entity.dart';
 
 /// 뉴스 검색 화면
 class SearchScreen extends StatefulWidget {
@@ -204,12 +203,12 @@ class _SearchScreenState extends State<SearchScreen> {
         border: Border.all(
           color: _focusNode.hasFocus 
               ? colorScheme.primary 
-              : colorScheme.outline.withOpacity(0.5),
+              : colorScheme.outline.withValues(alpha: 0.5),
           width: _focusNode.hasFocus ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1),
+            color: colorScheme.shadow.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

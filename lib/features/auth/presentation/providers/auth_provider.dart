@@ -1,24 +1,18 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../../core/errors/failures.dart';
-import '../../../../core/usecases/usecase.dart';
-import '../../domain/entities/user.dart';
-import '../../domain/usecases/usecases.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
+import 'package:insightflo_app/core/usecases/usecase.dart';
+import 'package:insightflo_app/features/auth/domain/entities/user.dart';
+import 'package:insightflo_app/features/auth/domain/usecases/usecases.dart';
 import 'auth_state.dart';
 
-/// Authentication provider that manages the application's authentication state
-/// 
-/// This provider implements the ChangeNotifier pattern to enable reactive UI updates
-/// when authentication state changes. It serves as the single source of truth for
-/// authentication-related data and operations in the presentation layer.
+/// Simplified Authentication provider for Guest-First app architecture
 /// 
 /// Key Features:
-/// - Reactive state management with automatic UI updates
-/// - Comprehensive error handling and user feedback
-/// - Loading state management to prevent concurrent operations
-/// - Automatic login state restoration on app startup
-/// - Integration with Clean Architecture use cases
-/// - Consumer pattern support for granular UI updates
+/// - Guest mode by default (no authentication required)
+/// - Optional login for data synchronization
+/// - Local-first data storage with cloud backup option
+/// - Simplified state management
 class AuthProvider extends ChangeNotifier {
   // Use cases for authentication operations
   final SignInUseCase _signInUseCase;
@@ -60,6 +54,7 @@ class AuthProvider extends ChangeNotifier {
   User? _currentUser;
   String? _errorMessage;
   bool _isInitialized = false;
+  bool _isGuestMode = true; // 기본적으로 게스트 모드
 
   // Public getters for accessing state
   
@@ -75,6 +70,12 @@ class AuthProvider extends ChangeNotifier {
   /// Whether the provider has finished initialization
   bool get isInitialized => _isInitialized;
 
+  /// Whether the app is running in guest mode
+  bool get isGuestMode => _isGuestMode;
+
+  /// Whether user has access to app features (guest mode or authenticated)
+  bool get hasAppAccess => _isGuestMode || _state.isAuthenticated;
+
   /// Convenience getters from AuthState extension
   bool get isLoading => _state.isLoading;
   bool get isAuthenticated => _state.isAuthenticated;
@@ -85,40 +86,54 @@ class AuthProvider extends ChangeNotifier {
   bool get canAuthenticate => _state.canAuthenticate;
   bool get hasAccess => _state.hasAccess;
 
-  /// Initialize authentication state by checking for existing user session
+  /// Initialize authentication state - Guest Mode by default
   /// 
-  /// This method is called automatically during provider construction and
-  /// attempts to restore the user's authentication state from stored tokens
-  /// or session data.
+  /// This method sets the app to guest mode initially, allowing full access
+  /// without authentication. Users can optionally sign in later for cloud sync.
   Future<void> _initializeAuthState() async {
     try {
       _setState(AuthState.initial);
       
-      // Attempt to get current user from stored session
+      // Start in guest mode - full app access without authentication
+      _isGuestMode = true;
+      _setState(AuthState.unauthenticated); // Technically unauthenticated but has access
+      _currentUser = null;
+      _errorMessage = null;
+      
+      // Optionally try to restore previous login session in background
+      _restoreUserSession();
+    } catch (e) {
+      // Even if initialization fails, stay in guest mode
+      _isGuestMode = true;
+      _setState(AuthState.unauthenticated);
+      _currentUser = null;
+      _errorMessage = null; // Don't show error in guest mode
+    } finally {
+      _isInitialized = true;
+      notifyListeners();
+    }
+  }
+
+  /// Attempt to restore user session in background (non-blocking)
+  Future<void> _restoreUserSession() async {
+    try {
       final result = await _getCurrentUserUseCase(GetCurrentUserParams());
       
       result.fold(
         (failure) {
-          // No existing session or session expired
-          _setState(AuthState.unauthenticated);
-          _currentUser = null;
-          _errorMessage = null;
+          // Stay in guest mode - no action needed
         },
         (user) {
-          // Valid session found
+          // Valid session found - switch from guest to authenticated
+          _isGuestMode = false;
           _setState(AuthState.authenticated);
           _currentUser = user;
           _errorMessage = null;
+          notifyListeners();
         },
       );
     } catch (e) {
-      // Handle unexpected initialization errors
-      _setState(AuthState.error);
-      _errorMessage = 'Failed to initialize authentication: ${e.toString()}';
-      _currentUser = null;
-    } finally {
-      _isInitialized = true;
-      notifyListeners();
+      // Ignore errors - stay in guest mode
     }
   }
 
@@ -163,6 +178,8 @@ class AuthProvider extends ChangeNotifier {
           return false;
         },
         (user) {
+          // Successfully authenticated - exit guest mode
+          _isGuestMode = false;
           _setState(AuthState.authenticated);
           _currentUser = user;
           _errorMessage = null;
@@ -263,6 +280,8 @@ class AuthProvider extends ChangeNotifier {
           return false;
         },
         (_) {
+          // Return to guest mode after sign-out
+          _isGuestMode = true;
           _setState(AuthState.unauthenticated);
           _currentUser = null;
           _errorMessage = null;

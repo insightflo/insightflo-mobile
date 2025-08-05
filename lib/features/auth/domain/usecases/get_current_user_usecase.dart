@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/errors/failures.dart';
-import '../../../../core/usecases/usecase.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
+import 'package:insightflo_app/core/usecases/usecase.dart';
 import '../entities/user.dart';
 import '../repositories/auth_repository.dart';
 
@@ -103,7 +103,12 @@ class GetCurrentUserUseCase implements UseCase<User?, GetCurrentUserParams> {
       ));
     }
 
-    if (user.email.isEmpty) {
+    // Allow anonymous users with empty emails - check metadata for anonymous flag
+    final isAnonymous = user.metadata?['isAnonymous'] == true || 
+                       user.email.isEmpty ||
+                       user.email == 'null';
+    
+    if (user.email.isEmpty && !isAnonymous) {
       return const Left(ValidationFailure(
         message: 'User email is missing or invalid.',
         statusCode: 422,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import '../../domain/value_objects/email.dart';  
-import '../../domain/value_objects/password.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/auth/domain/value_objects/email.dart';
+import 'package:insightflo_app/features/auth/domain/value_objects/password.dart';
 
 /// Sign-in page with Material 3 design and accessibility compliance
 /// 

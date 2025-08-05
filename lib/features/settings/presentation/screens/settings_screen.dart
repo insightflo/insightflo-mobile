@@ -6,10 +6,10 @@ import 'package:provider/provider.dart';
 // import 'package:device_info_plus/device_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../news/presentation/providers/theme_provider.dart';
+import 'package:insightflo_app/features/news/presentation/providers/theme_provider.dart';
 // import '../widgets/setting_section.dart'; // Using inline implementation
-import '../widgets/setting_tile.dart';
-import '../widgets/confirmation_dialog.dart';
+import 'package:insightflo_app/features/settings/presentation/widgets/setting_tile.dart';
+import 'package:insightflo_app/features/settings/presentation/widgets/confirmation_dialog.dart';
 
 // Fallback implementation for PackageInfo (replace when package is available)
 class _FallbackPackageInfo {

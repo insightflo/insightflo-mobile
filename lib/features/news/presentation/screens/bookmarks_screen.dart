@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/news_provider.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../widgets/news_card.dart';
-import '../../domain/entities/news_entity.dart';
+import 'package:insightflo_app/features/news/presentation/providers/news_provider.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/news/presentation/widgets/news_card.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_entity.dart';
 
 /// 북마크 화면 - Material 3 디자인
 /// 

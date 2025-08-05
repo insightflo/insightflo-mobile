@@ -3,9 +3,9 @@ import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:drift/drift.dart';
-import '../../../../core/database/database.dart';
-import '../../domain/models/search_filter.dart';
-import '../../domain/services/advanced_search_service.dart';
+import 'package:insightflo_app/core/database/database.dart';
+import 'package:insightflo_app/features/news/domain/models/search_filter.dart';
+import 'package:insightflo_app/features/news/domain/services/advanced_search_service.dart';
 import '../datasources/news_local_data_source.dart';
 import '../models/news_model.dart';
 

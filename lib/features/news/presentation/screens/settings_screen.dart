@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 // Package info imports removed - using fallback implementation
 import 'package:url_launcher/url_launcher.dart';
 
-import '../providers/theme_provider.dart';
-import '../widgets/setting_tile.dart';
-import '../widgets/confirmation_dialog.dart';
+import 'package:insightflo_app/features/news/presentation/providers/theme_provider.dart';
+import 'package:insightflo_app/features/news/presentation/widgets/setting_tile.dart';
+import 'package:insightflo_app/features/news/presentation/widgets/confirmation_dialog.dart';
 
 /// Settings screen with comprehensive app configuration options
 /// 

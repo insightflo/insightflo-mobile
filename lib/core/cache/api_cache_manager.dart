@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:drift/drift.dart';
-import '../database/app_database.dart';
-import '../monitoring/performance_monitor.dart';
+import 'package:insightflo_app/core/database/app_database.dart';
+import 'package:insightflo_app/core/monitoring/performance_monitor.dart';
 
 /// 고성능 API 캐시 매니저
 /// API-First 아키텍처를 위한 지능형 캐싱 전략 구현
@@ -16,7 +16,7 @@ class ApiCacheManager {
   static const Duration _defaultCacheDuration = Duration(hours: 1);
   static const Duration _searchCacheDuration = Duration(minutes: 15);
   static const Duration _staleWhileRevalidateWindow = Duration(hours: 2);
-  
+
   /// 캐시 상태 상수
   static const String _cacheStatusFresh = 'fresh';
   static const String _cacheStatusStale = 'stale';
@@ -26,9 +26,9 @@ class ApiCacheManager {
     required AppDatabase database,
     required Connectivity connectivity,
     required MetricCollector metricsCollector,
-  })  : _database = database,
-        _connectivity = connectivity,
-        _metricsCollector = metricsCollector;
+  }) : _database = database,
+       _connectivity = connectivity,
+       _metricsCollector = metricsCollector;
 
   /// 뉴스 기사를 캐시에 저장하고 API에서 가져온 데이터와 동기화
   Future<void> cacheNewsArticles({
@@ -42,7 +42,7 @@ class ApiCacheManager {
       () async {
         final now = DateTime.now().millisecondsSinceEpoch;
         final effectiveCacheDuration = cacheDuration ?? _defaultCacheDuration;
-        
+
         // 캐시된 기사를 NewsTableCompanion으로 변환
         final newsCompanions = articles.map((article) {
           return NewsTableCompanion.insert(
@@ -53,13 +53,21 @@ class ApiCacheManager {
             url: article['url'] as String,
             source: article['source'] as String,
             publishedAt: _parseTimestamp(article['published_at']),
-            keywords: Value(article['keywords'] is List 
-                ? jsonEncode(article['keywords'])
-                : article['keywords'] as String? ?? '[]'),
+            keywords: Value(
+              article['keywords'] is List
+                  ? jsonEncode(article['keywords'])
+                  : article['keywords'] as String? ?? '[]',
+            ),
             imageUrl: Value(article['image_url'] as String?),
-            sentimentScore: Value((article['sentiment_score'] as num?)?.toDouble() ?? 0.0),
-            sentimentLabel: Value(article['sentiment_label'] as String? ?? 'neutral'),
-            isBookmarked: Value((article['is_bookmarked'] as bool?) == true ? 1 : 0),
+            sentimentScore: Value(
+              (article['sentiment_score'] as num?)?.toDouble() ?? 0.0,
+            ),
+            sentimentLabel: Value(
+              article['sentiment_label'] as String? ?? 'neutral',
+            ),
+            isBookmarked: Value(
+              (article['is_bookmarked'] as bool?) == true ? 1 : 0,
+            ),
             cachedAt: now,
             userId: userId,
           );
@@ -143,7 +151,7 @@ class ApiCacheManager {
           isStale: cacheStatus == _cacheStatusStale,
           shouldRevalidate: cacheStatus != _cacheStatusFresh,
           cacheKey: cacheKey,
-          lastUpdated: syncMetadata?.lastSyncTime != null 
+          lastUpdated: syncMetadata?.lastSyncTime != null
               ? DateTime.fromMillisecondsSinceEpoch(syncMetadata!.lastSyncTime)
               : null,
         );
@@ -203,9 +211,10 @@ class ApiCacheManager {
   Future<CacheStrategy> determineCacheStrategy() async {
     try {
       final connectivityResults = await _connectivity.checkConnectivity();
-      final isConnected = connectivityResults.isNotEmpty && 
+      final isConnected =
+          connectivityResults.isNotEmpty &&
           !connectivityResults.contains(ConnectivityResult.none);
-      
+
       if (!isConnected) {
         return CacheStrategy.cacheOnly;
       }
@@ -244,7 +253,7 @@ class ApiCacheManager {
             'DELETE FROM news_articles WHERE user_id = ?',
             [userId],
           );
-          
+
           // 동기화 메타데이터도 리셋
           await _database.upsertSyncMetadata(
             tableName: 'news_articles',
@@ -271,11 +280,11 @@ class ApiCacheManager {
       'cache_cleanup',
       () async {
         final stopwatch = Stopwatch()..start();
-        
+
         try {
           // 데이터베이스 통계 가져오기 (정리 전)
           final statsBefore = await _database.getDatabaseStats(userId: userId);
-          
+
           // 1. 만료된 기사 정리 (기본 7일 보관)
           final deletedArticles = await _database.cleanupOldArticles(
             userId: userId,
@@ -296,7 +305,7 @@ class ApiCacheManager {
 
           // 데이터베이스 통계 가져오기 (정리 후)
           final statsAfter = await _database.getDatabaseStats(userId: userId);
-          
+
           stopwatch.stop();
 
           return CacheCleanupResult(
@@ -338,8 +347,10 @@ class ApiCacheManager {
       bookmarkedArticles: dbStats['bookmarked'] ?? 0,
       articlesLast24Hours: dbStats['fresh'] ?? 0,
       articlesLastWeek: dbStats['total'] ?? 0,
-      lastSyncTime: syncStats['lastSyncTime'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(syncStats['lastSyncTime'] as int)
+      lastSyncTime: syncStats['lastSyncTime'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(
+              syncStats['lastSyncTime'] as int,
+            )
           : null,
       syncStatus: _determineSyncStatusFromStats(syncStats),
       cacheHitRate: await _calculateCacheHitRate(userId),
@@ -350,9 +361,11 @@ class ApiCacheManager {
   Future<double> _calculateCacheHitRate(String userId) async {
     // 실제 구현에서는 메트릭 컬렉터에서 캐시 히트/미스 데이터를 가져와야 함
     // 여기서는 간단한 예시 구현
-    final freshCount = (await _database.getDatabaseStats(userId: userId))['fresh'] ?? 0;
-    final totalCount = (await _database.getDatabaseStats(userId: userId))['total'] ?? 0;
-    
+    final freshCount =
+        (await _database.getDatabaseStats(userId: userId))['fresh'] ?? 0;
+    final totalCount =
+        (await _database.getDatabaseStats(userId: userId))['total'] ?? 0;
+
     if (totalCount == 0) return 0.0;
     return freshCount / totalCount;
   }
@@ -374,12 +387,14 @@ class ApiCacheManager {
   /// 동기화 통계에서 상태 결정
   String _determineSyncStatusFromStats(Map<String, dynamic> syncStats) {
     final statusCounts = syncStats['byStatus'] as Map<String, int>? ?? {};
-    
+
     if (statusCounts.containsKey('failed') && statusCounts['failed']! > 0) {
       return 'partially_failed';
-    } else if (statusCounts.containsKey('syncing') && statusCounts['syncing']! > 0) {
+    } else if (statusCounts.containsKey('syncing') &&
+        statusCounts['syncing']! > 0) {
       return 'syncing';
-    } else if (statusCounts.containsKey('completed') && statusCounts['completed']! > 0) {
+    } else if (statusCounts.containsKey('completed') &&
+        statusCounts['completed']! > 0) {
       return 'up_to_date';
     } else {
       return 'pending';
@@ -413,13 +428,13 @@ class CacheResult<T> {
 enum CacheStrategy {
   /// 네트워크 우선, 캐시 백업
   networkFirst,
-  
+
   /// 캐시 우선, 네트워크 백업
   cacheFirst,
-  
+
   /// 캐시만 사용 (오프라인)
   cacheOnly,
-  
+
   /// 캐시와 네트워크 동시 요청
   staleWhileRevalidate,
 }
@@ -451,8 +466,8 @@ class CacheCleanupResult {
   });
 
   int get totalSpaceSaved => spaceReclaimed + (articlesBefore - articlesAfter);
-  double get cleanupEfficiency => articlesBefore > 0 
-      ? (articlesBefore - articlesAfter) / articlesBefore 
+  double get cleanupEfficiency => articlesBefore > 0
+      ? (articlesBefore - articlesAfter) / articlesBefore
       : 0.0;
 }
 
@@ -478,6 +493,8 @@ class CacheStatistics {
     required this.cacheHitRate,
   });
 
-  double get freshnessRatio => totalArticles > 0 ? freshArticles / totalArticles : 0.0;
-  double get bookmarkRatio => totalArticles > 0 ? bookmarkedArticles / totalArticles : 0.0;
+  double get freshnessRatio =>
+      totalArticles > 0 ? freshArticles / totalArticles : 0.0;
+  double get bookmarkRatio =>
+      totalArticles > 0 ? bookmarkedArticles / totalArticles : 0.0;
 }

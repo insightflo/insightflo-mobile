@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/news_provider.dart';
+import 'package:insightflo_app/features/news/presentation/providers/news_provider.dart';
 
 /// Custom search bar widget for news search functionality
 class SearchBarWidget extends StatefulWidget {

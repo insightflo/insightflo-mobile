@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/news_provider.dart';
-import '../../domain/entities/news_entity.dart';
+import 'package:insightflo_app/features/news/presentation/providers/news_provider.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_entity.dart';
 
 /// InsightFlo 뉴스 홈 화면 - 개인화된 뉴스 피드
 class NewsHomeScreen extends StatefulWidget {
@@ -73,8 +73,79 @@ class _NewsHomeScreenState extends State<NewsHomeScreen> {
           controller: _scrollController,
           slivers: [
             // _buildHeader(), // 헤더를 나중에 다시 활성화할 수 있도록 주석 처리
+            _buildPersonalizationCard(),
             _buildPersonalizedFeed(),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// 개인화 설정 카드
+  Widget _buildPersonalizationCard() {
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              debugPrint('🔘 관심사 설정 버튼 클릭됨 - 키워드 화면으로 이동 시도');
+              context.go('/keywords');
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context).colorScheme.primaryContainer,
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.tune,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '관심사 설정',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '키워드를 설정하여 개인화된 뉴스를 받아보세요',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

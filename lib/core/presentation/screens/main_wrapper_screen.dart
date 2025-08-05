@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../features/news/presentation/providers/theme_provider.dart';
-import '../../navigation/route_utils.dart';
+import 'package:insightflo_app/features/news/presentation/providers/theme_provider.dart';
+import 'package:insightflo_app/core/navigation/route_utils.dart';
 
 /// 메인 애플리케이션 래퍼 화면 - ShellRoute 호환
 ///

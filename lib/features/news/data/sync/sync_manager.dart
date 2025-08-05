@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-import '../../../../core/database/database.dart';
+import 'package:insightflo_app/core/database/database.dart';
 import '../models/news_model.dart';
 import '../datasources/news_local_data_source.dart';
 import '../datasources/news_remote_data_source.dart';

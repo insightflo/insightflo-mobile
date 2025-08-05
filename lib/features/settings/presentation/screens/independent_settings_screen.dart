@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../news/presentation/providers/theme_provider.dart';
+import 'package:insightflo_app/features/news/presentation/providers/theme_provider.dart';
 
 /// 독립적인 설정 화면 - 핵심 기능만 포함
-/// 
+///
 /// 기능:
 /// - FCM 알림 설정 (푸시 알림 토글)
 /// - 테마 선택 (라이트/다크/시스템)
@@ -16,14 +15,15 @@ class IndependentSettingsScreen extends StatefulWidget {
   const IndependentSettingsScreen({super.key});
 
   @override
-  State<IndependentSettingsScreen> createState() => _IndependentSettingsScreenState();
+  State<IndependentSettingsScreen> createState() =>
+      _IndependentSettingsScreenState();
 }
 
 class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
   // 설정 상태
   bool _fcmNotificationsEnabled = true;
   String _selectedLanguage = 'ko';
-  
+
   // 캐시 정보
   String _cacheSize = '계산 중...';
   bool _isCalculatingCache = true;
@@ -58,10 +58,10 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
     try {
       // 캐시 크기 계산 시뮬레이션 (실제로는 앱 캐시 디렉토리 크기 계산)
       await Future.delayed(const Duration(seconds: 1));
-      
+
       // 시뮬레이션된 캐시 크기 (실제로는 Directory 크기 계산)
       const simulatedCacheSize = 47 * 1024 * 1024; // 47MB
-      
+
       setState(() {
         _cacheSize = _formatBytes(simulatedCacheSize);
         _isCalculatingCache = false;
@@ -78,10 +78,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          '설정',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('설정', style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
       ),
@@ -89,7 +86,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
         builder: (context, themeProvider, _) {
           final theme = Theme.of(context);
           final colorScheme = theme.colorScheme;
-          
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -112,12 +109,12 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                           _fcmNotificationsEnabled = value;
                         });
                         await _saveSettings();
-                        
+
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                value 
+                                value
                                     ? 'FCM 알림이 활성화되었습니다'
                                     : 'FCM 알림이 비활성화되었습니다',
                               ),
@@ -131,9 +128,9 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // 테마 설정 섹션
                 _buildSectionCard(
                   title: '테마 설정',
@@ -149,7 +146,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                       theme: theme,
                       colorScheme: colorScheme,
                     ),
-                    
+
                     _buildSwitchTile(
                       title: '다이나믹 컬러',
                       subtitle: '시스템 색상 구성표 사용',
@@ -159,7 +156,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                       theme: theme,
                       colorScheme: colorScheme,
                     ),
-                    
+
                     _buildTapTile(
                       title: '글꼴 크기',
                       subtitle: _getFontSizeText(themeProvider.fontScale),
@@ -170,9 +167,9 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // 언어 설정 섹션
                 _buildSectionCard(
                   title: '언어 설정',
@@ -190,9 +187,9 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // 캐시 관리 섹션
                 _buildSectionCard(
                   title: '캐시 관리',
@@ -205,7 +202,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                       title: '캐시 크기',
                       subtitle: _isCalculatingCache ? '계산 중...' : _cacheSize,
                       icon: Icons.folder_outlined,
-                      trailing: _isCalculatingCache 
+                      trailing: _isCalculatingCache
                           ? SizedBox(
                               width: 16,
                               height: 16,
@@ -224,7 +221,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                       theme: theme,
                       colorScheme: colorScheme,
                     ),
-                    
+
                     // 캐시 삭제 버튼
                     _buildTapTile(
                       title: '캐시 삭제',
@@ -233,7 +230,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                       onTap: _isClearingCache ? null : _showCacheClearDialog,
                       theme: theme,
                       colorScheme: colorScheme,
-                      trailing: _isClearingCache 
+                      trailing: _isClearingCache
                           ? SizedBox(
                               width: 16,
                               height: 16,
@@ -248,7 +245,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 32),
               ],
             ),
@@ -271,10 +268,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
       color: colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: colorScheme.outlineVariant,
-          width: 1,
-        ),
+        side: BorderSide(color: colorScheme.outlineVariant, width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -297,9 +291,9 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                     size: 18,
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
-                
+
                 Text(
                   title,
                   style: theme.textTheme.titleMedium?.copyWith(
@@ -309,9 +303,9 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // 섹션 내용
             ...children,
           ],
@@ -340,11 +334,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
             color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            color: colorScheme.onSecondaryContainer,
-            size: 20,
-          ),
+          child: Icon(icon, color: colorScheme.onSecondaryContainer, size: 20),
         ),
         title: Text(
           title,
@@ -359,13 +349,8 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
             color: colorScheme.onSurfaceVariant,
           ),
         ),
-        trailing: Switch(
-          value: value,
-          onChanged: onChanged,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        trailing: Switch(value: value, onChanged: onChanged),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 8),
       ),
     );
@@ -391,11 +376,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
             color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            color: colorScheme.onSecondaryContainer,
-            size: 20,
-          ),
+          child: Icon(icon, color: colorScheme.onSecondaryContainer, size: 20),
         ),
         title: Text(
           title,
@@ -410,14 +391,11 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
             color: colorScheme.onSurfaceVariant,
           ),
         ),
-        trailing: trailing ?? Icon(
-          Icons.chevron_right,
-          color: colorScheme.onSurfaceVariant,
-        ),
+        trailing:
+            trailing ??
+            Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
         onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 8),
       ),
     );
@@ -442,11 +420,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
             color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            color: colorScheme.onSecondaryContainer,
-            size: 20,
-          ),
+          child: Icon(icon, color: colorScheme.onSecondaryContainer, size: 20),
         ),
         title: Text(
           title,
@@ -462,9 +436,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
           ),
         ),
         trailing: trailing,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 8),
       ),
     );
@@ -542,7 +514,9 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
               Text(
                 '샘플 텍스트입니다',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontSize: (Theme.of(context).textTheme.bodyLarge?.fontSize ?? 16) * themeProvider.fontScale,
+                  fontSize:
+                      (Theme.of(context).textTheme.bodyLarge?.fontSize ?? 16) *
+                      themeProvider.fontScale,
                 ),
               ),
               const SizedBox(height: 20),
@@ -603,7 +577,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                   });
                   await _saveSettings();
                   Navigator.pop(context);
-                  
+
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -627,7 +601,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
                   });
                   await _saveSettings();
                   Navigator.pop(context);
-                  
+
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -663,14 +637,12 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
           children: [
             Text(
               '현재 캐시 크기: $_cacheSize',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            const Text(
-              '캐시를 삭제하면 다음 항목들이 제거됩니다:',
-            ),
+            const Text('캐시를 삭제하면 다음 항목들이 제거됩니다:'),
             const SizedBox(height: 8),
             const Text('• 이미지 캐시'),
             const Text('• 임시 파일'),
@@ -679,7 +651,9 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primaryContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -730,18 +704,18 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
     try {
       // 캐시 삭제 시뮬레이션 (실제로는 앱 캐시 디렉토리 삭제)
       await Future.delayed(const Duration(seconds: 2));
-      
+
       // 실제 구현에서는 아래와 같이 캐시를 삭제
       // final cacheDir = await getTemporaryDirectory();
       // if (cacheDir.existsSync()) {
       //   cacheDir.deleteSync(recursive: true);
       // }
-      
+
       setState(() {
         _cacheSize = '0 B';
         _isClearingCache = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -758,7 +732,7 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
       setState(() {
         _isClearingCache = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -816,7 +790,8 @@ class _IndependentSettingsScreenState extends State<IndependentSettingsScreen> {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 }

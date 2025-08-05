@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
-import '../models/news_model.dart';
-import '../../../../core/database/database.dart';
+import 'package:insightflo_app/features/news/data/models/news_model.dart';
+import 'package:insightflo_app/core/utils/logger.dart';
+import 'package:insightflo_app/core/database/database.dart';
 
 /// Abstract interface for local news data operations
 abstract class NewsLocalDataSource {
@@ -61,10 +62,7 @@ abstract class NewsLocalDataSource {
   Future<Map<String, int>> getDatabaseStats({required String userId});
 
   /// Checks if an article exists in cache
-  Future<bool> hasArticle({
-    required String articleId,
-    required String userId,
-  });
+  Future<bool> hasArticle({required String articleId, required String userId});
 
   // Advanced queries for performance optimization
 
@@ -118,7 +116,7 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
       limit: limit,
       offset: offset,
     );
-    
+
     return data.map((row) => NewsModel.fromDatabaseRow(row.toJson())).toList();
   }
 
@@ -127,11 +125,8 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
     required String userId,
     int limit = 20,
   }) async {
-    final data = await database.getFreshNews(
-      userId: userId,
-      limit: limit,
-    );
-    
+    final data = await database.getFreshNews(userId: userId, limit: limit);
+
     return data.map((row) => NewsModel.fromDatabaseRow(row.toJson())).toList();
   }
 
@@ -146,7 +141,7 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
       query: query,
       limit: limit,
     );
-    
+
     return data.map((row) => NewsModel.fromDatabaseRow(row.toJson())).toList();
   }
 
@@ -155,11 +150,8 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
     required String userId,
     int limit = 20,
   }) async {
-    final data = await database.getBookmarkedNews(
-      userId: userId,
-      limit: limit,
-    );
-    
+    final data = await database.getBookmarkedNews(userId: userId, limit: limit);
+
     return data.map((row) => NewsModel.fromDatabaseRow(row.toJson())).toList();
   }
 
@@ -176,7 +168,7 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
       maxSentiment: maxSentiment,
       limit: limit,
     );
-    
+
     return data.map((row) => NewsModel.fromDatabaseRow(row.toJson())).toList();
   }
 
@@ -186,7 +178,7 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
       final companion = _newsModelToCompanion(article);
       await database.insertOrUpdateNews(companion);
     } catch (e) {
-      print('Error caching news article: $e');
+      AppLogger.error('Error caching news article', e);
       rethrow; // Re-throw to let caller handle the error
     }
   }
@@ -194,12 +186,12 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
   @override
   Future<void> batchCacheNewsArticles(List<NewsModel> articles) async {
     if (articles.isEmpty) return;
-    
+
     try {
       final companions = articles.map(_newsModelToCompanion).toList();
       await database.batchInsertNews(companions);
     } catch (e) {
-      print('Error batch caching articles: $e');
+      AppLogger.error('Error batch caching articles', e);
       rethrow; // Re-throw to let caller handle the error
     }
   }
@@ -245,11 +237,7 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
       return await database.getDatabaseStats(userId: userId);
     } catch (e) {
       print('Error getting database stats: $e');
-      return {
-        'total': 0,
-        'bookmarked': 0,
-        'fresh': 0,
-      };
+      return {'total': 0, 'bookmarked': 0, 'fresh': 0};
     }
   }
 
@@ -259,13 +247,14 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
     required String userId,
   }) async {
     try {
-      final result = await (database.select(database.newsTable)
-            ..where((tbl) => 
-                tbl.id.equals(articleId) & 
-                tbl.userId.equals(userId))
-            ..limit(1))
-          .get();
-      
+      final result =
+          await (database.select(database.newsTable)
+                ..where(
+                  (tbl) => tbl.id.equals(articleId) & tbl.userId.equals(userId),
+                )
+                ..limit(1))
+              .get();
+
       return result.isNotEmpty;
     } catch (e) {
       // Log error and return false to prevent app crashes
@@ -290,8 +279,10 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
         endDate: endDate,
         limit: limit,
       );
-      
-      return data.map((row) => NewsModel.fromDatabaseRow(row.toJson())).toList();
+
+      return data
+          .map((row) => NewsModel.fromDatabaseRow(row.toJson()))
+          .toList();
     } catch (e) {
       print('Error getting news by date range: $e');
       return [];
@@ -310,8 +301,10 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
         sentimentLabel: sentimentLabel,
         limit: limit,
       );
-      
-      return data.map((row) => NewsModel.fromDatabaseRow(row.toJson())).toList();
+
+      return data
+          .map((row) => NewsModel.fromDatabaseRow(row.toJson()))
+          .toList();
     } catch (e) {
       print('Error getting top news by sentiment: $e');
       return [];
@@ -324,10 +317,7 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
     int limit = 50,
   }) async {
     try {
-      return await database.getSourceStatistics(
-        userId: userId,
-        limit: limit,
-      );
+      return await database.getSourceStatistics(userId: userId, limit: limit);
     } catch (e) {
       print('Error getting source statistics: $e');
       return [];
@@ -342,7 +332,7 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
     required Map<String, double> sentimentUpdates,
   }) async {
     if (sentimentUpdates.isEmpty) return 0;
-    
+
     try {
       return await database.batchUpdateSentiment(
         userId: userId,
@@ -360,11 +350,7 @@ class NewsLocalDataSourceImpl implements NewsLocalDataSource {
       return await database.optimizeDatabase();
     } catch (e) {
       print('Error optimizing database: $e');
-      return {
-        'success': false,
-        'error': e.toString(),
-        'durationMs': 0,
-      };
+      return {'success': false, 'error': e.toString(), 'durationMs': 0};
     }
   }
 

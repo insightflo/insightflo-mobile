@@ -106,7 +106,7 @@ class ThemeProvider extends ChangeNotifier {
     _customSeedColor = color;
     
     if (color != null) {
-      await _prefs?.setInt(_customSeedColorKey, color.value);
+      await _prefs?.setInt(_customSeedColorKey, color.toARGB32());
     } else {
       await _prefs?.remove(_customSeedColorKey);
     }

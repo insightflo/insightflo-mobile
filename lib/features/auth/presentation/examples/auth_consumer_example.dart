@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/providers.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/providers.dart';
 
 /// Example demonstrating how to use AuthProvider with Consumer pattern
 /// 

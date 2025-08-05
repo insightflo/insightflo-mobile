@@ -1,4 +1,4 @@
-import '../../domain/entities/user_keyword.dart';
+import 'package:insightflo_app/features/news/domain/entities/user_keyword.dart';
 
 /// Data model for UserKeyword entity
 class UserKeywordModel extends UserKeyword {

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../database/app_database.dart';
-import '../monitoring/performance_monitor.dart';
+import 'package:insightflo_app/core/database/app_database.dart';
+import 'package:insightflo_app/core/monitoring/performance_monitor.dart';
 import 'api_cache_manager.dart';
 
 /// API 캐싱을 위한 서비스 추상화 레이어
@@ -10,16 +10,16 @@ import 'api_cache_manager.dart';
 abstract class CacheService {
   /// 캐시에서 데이터 가져오기
   Future<CacheResult<T>> getFromCache<T>(String key);
-  
+
   /// 캐시에 데이터 저장
   Future<void> putInCache<T>(String key, T data, {Duration? ttl});
-  
+
   /// 캐시 무효화
   Future<void> invalidate(String key);
-  
+
   /// 캐시 전체 정리
   Future<void> clearCache();
-  
+
   /// 캐시 통계
   Future<CacheStatistics> getStatistics();
 }
@@ -28,7 +28,7 @@ abstract class CacheService {
 class ApiCacheService implements CacheService {
   final ApiCacheManager _cacheManager;
   final String _userId;
-  
+
   /// 캐시 키 접두사
   static const String _newsKeyPrefix = 'news_';
   static const String _searchKeyPrefix = 'search_';
@@ -36,13 +36,13 @@ class ApiCacheService implements CacheService {
   ApiCacheService({
     required ApiCacheManager cacheManager,
     required String userId,
-  })  : _cacheManager = cacheManager,
-        _userId = userId;
+  }) : _cacheManager = cacheManager,
+       _userId = userId;
 
   @override
   Future<CacheResult<T>> getFromCache<T>(String key) async {
     final cacheKey = _buildCacheKey(key);
-    
+
     if (key.startsWith(_newsKeyPrefix)) {
       final result = await _cacheManager.getCachedNews(
         userId: _userId,
@@ -71,14 +71,14 @@ class ApiCacheService implements CacheService {
         lastUpdated: result.lastUpdated,
       );
     }
-    
+
     throw UnsupportedError('Cache key type not supported: $key');
   }
 
   @override
   Future<void> putInCache<T>(String key, T data, {Duration? ttl}) async {
     final cacheKey = _buildCacheKey(key);
-    
+
     if (key.startsWith(_newsKeyPrefix) && data is List<Map<String, dynamic>>) {
       await _cacheManager.cacheNewsArticles(
         userId: _userId,
@@ -86,7 +86,8 @@ class ApiCacheService implements CacheService {
         cacheKey: cacheKey,
         cacheDuration: ttl,
       );
-    } else if (key.startsWith(_searchKeyPrefix) && data is List<Map<String, dynamic>>) {
+    } else if (key.startsWith(_searchKeyPrefix) &&
+        data is List<Map<String, dynamic>>) {
       final query = key.substring(_searchKeyPrefix.length);
       await _cacheManager.cacheSearchResults(
         userId: _userId,
@@ -145,18 +146,16 @@ class CacheServiceFactory {
     MetricCollector? metricsCollector,
   }) {
     final effectiveConnectivity = connectivity ?? Connectivity();
-    final effectiveMetricsCollector = metricsCollector ?? MetricCollector.instance;
-    
+    final effectiveMetricsCollector =
+        metricsCollector ?? MetricCollector.instance;
+
     final cacheManager = ApiCacheManager(
       database: database,
       connectivity: effectiveConnectivity,
       metricsCollector: effectiveMetricsCollector,
     );
-    
-    return ApiCacheService(
-      cacheManager: cacheManager,
-      userId: userId,
-    );
+
+    return ApiCacheService(cacheManager: cacheManager, userId: userId);
   }
 }
 

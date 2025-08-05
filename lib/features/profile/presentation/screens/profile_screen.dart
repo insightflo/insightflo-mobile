@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../news/presentation/providers/theme_provider.dart';
-import '../widgets/edit_profile_dialog.dart';
+import 'package:go_router/go_router.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/news/presentation/providers/theme_provider.dart';
+import 'package:insightflo_app/features/profile/presentation/widgets/edit_profile_dialog.dart';
 
 /// 프로필 화면 - Material 3 디자인
 /// 
@@ -158,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user?.email ?? 'guest@insightflo.com',
+                    user?.email ?? '게스트 사용자',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
@@ -168,9 +169,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                   const SizedBox(height: 4),
                   
                   Text(
-                    user != null 
-                        ? '가입일: ${_formatDate(user.createdAt ?? DateTime.now())}'
-                        : '게스트 사용자',
+                    user != null && user.email.isNotEmpty
+                        ? '등록된 사용자'
+                        : '임시 데이터 보관 중 • 로그인하면 영구 보관',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -178,21 +179,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                   
                   const SizedBox(height: 12),
                   
-                  // 사용자 상태
+                  // 사용자 상태 - 게스트/익명 사용자에게는 다른 표시
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: user?.emailConfirmed == true 
-                          ? colorScheme.primaryContainer
-                          : colorScheme.tertiaryContainer,
+                      color: user == null || user.email.isEmpty
+                          ? colorScheme.secondaryContainer
+                          : user.emailConfirmed == true 
+                              ? colorScheme.primaryContainer
+                              : colorScheme.tertiaryContainer,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      user?.emailConfirmed == true ? '인증됨' : '미인증',
+                      user == null || user.email.isEmpty
+                          ? '게스트 모드'
+                          : user.emailConfirmed == true ? '인증됨' : '미인증',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: user?.emailConfirmed == true 
-                            ? colorScheme.onPrimaryContainer
-                            : colorScheme.onTertiaryContainer,
+                        color: user == null || user.email.isEmpty
+                            ? colorScheme.onSecondaryContainer
+                            : user.emailConfirmed == true 
+                                ? colorScheme.onPrimaryContainer
+                                : colorScheme.onTertiaryContainer,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -218,46 +225,89 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   /// 계정 설정 섹션
   Widget _buildAccountSection(ThemeData theme, ColorScheme colorScheme, AuthProvider authProvider) {
+    final user = authProvider.currentUser;
+    // 게스트 모드 판단: user가 null이거나, email이 null이거나 빈 문자열인 경우
+    final isGuestMode = user == null || user.email.isEmpty;
+    
     return _buildSection(
-      title: '계정 설정',
+      title: isGuestMode ? '게스트 설정' : '계정 설정',
       theme: theme,
       colorScheme: colorScheme,
       children: [
+        // 관심사 관리는 모든 사용자에게 표시
         _buildListTile(
-          icon: Icons.person_outline,
-          title: '프로필 편집',
-          subtitle: '개인정보 수정',
-          onTap: () => _showProfileEditDialog(theme, colorScheme),
+          icon: Icons.label_outline,
+          title: '관심사 관리',
+          subtitle: '개인화 뉴스를 위한 키워드 설정',
+          onTap: () => context.go('/keywords'),
           theme: theme,
           colorScheme: colorScheme,
         ),
         
+        // 게스트 모드가 아닌 경우에만 표시되는 항목들
+        if (!isGuestMode) ...[
+          _buildListTile(
+            icon: Icons.person_outline,
+            title: '프로필 편집',
+            subtitle: '개인정보 수정',
+            onTap: () => _showProfileEditDialog(theme, colorScheme),
+            theme: theme,
+            colorScheme: colorScheme,
+          ),
+          
+          _buildListTile(
+            icon: Icons.security_outlined,
+            title: '보안 설정',
+            subtitle: '비밀번호 변경 및 2단계 인증',
+            onTap: () => _showSecuritySettings(theme, colorScheme),
+            theme: theme,
+            colorScheme: colorScheme,
+          ),
+          
+          _buildListTile(
+            icon: Icons.sync_outlined,
+            title: '데이터 동기화',
+            subtitle: '북마크 및 설정 동기화',
+            onTap: () => _showSyncSettings(theme, colorScheme),
+            theme: theme,
+            colorScheme: colorScheme,
+          ),
+        ],
+        
+        // 알림 설정은 모든 사용자에게 표시 (로컬 알림 포함)
         _buildListTile(
           icon: Icons.notifications_outlined,
           title: '알림 설정',
-          subtitle: '푸시 알림 및 이메일 설정',
+          subtitle: isGuestMode ? '앱 알림 설정' : '푸시 알림 및 이메일 설정',
           onTap: () => _showNotificationSettings(theme, colorScheme),
           theme: theme,
           colorScheme: colorScheme,
         ),
         
-        _buildListTile(
-          icon: Icons.security_outlined,
-          title: '보안 설정',
-          subtitle: '비밀번호 변경 및 2단계 인증',
-          onTap: () => _showSecuritySettings(theme, colorScheme),
-          theme: theme,
-          colorScheme: colorScheme,
-        ),
-        
-        _buildListTile(
-          icon: Icons.sync_outlined,
-          title: '데이터 동기화',
-          subtitle: '북마크 및 설정 동기화',
-          onTap: () => _showSyncSettings(theme, colorScheme),
-          theme: theme,
-          colorScheme: colorScheme,
-        ),
+        // 게스트 모드인 경우 로그인 유도 카드 추가
+        if (isGuestMode)
+          _buildListTile(
+            icon: Icons.login,
+            title: '로그인 하기',
+            subtitle: '데이터를 영구 보관하고 모든 기능을 이용하세요',
+            onTap: () => _showLoginPrompt(theme, colorScheme),
+            theme: theme,
+            colorScheme: colorScheme,
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '추천',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -719,6 +769,68 @@ class _ProfileScreenState extends State<ProfileScreen>
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLoginPrompt(ThemeData theme, ColorScheme colorScheme) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.login,
+              color: colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            const Text('로그인'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('로그인하면 다음 혜택을 누릴 수 있습니다:'),
+            const SizedBox(height: 16),
+            _buildBenefitItem('📱', '모든 기기에서 데이터 동기화'),
+            _buildBenefitItem('💾', '북마크와 설정 영구 보관'),
+            _buildBenefitItem('🔔', '개인화된 알림 서비스'),
+            _buildBenefitItem('🎯', '고급 개인화 기능'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('나중에'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // TODO: 로그인 화면으로 이동
+              _showComingSoonDialog('로그인');
+            },
+            child: const Text('로그인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBenefitItem(String emoji, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
         ],
       ),

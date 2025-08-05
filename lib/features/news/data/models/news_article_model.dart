@@ -1,4 +1,4 @@
-import '../../domain/entities/news_article.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_article.dart';
 
 /// Data model for NewsArticle entity
 class NewsArticleModel extends NewsArticle {

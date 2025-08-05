@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/news_provider.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../widgets/search_bar_widget.dart';
-import '../widgets/news_list_view.dart';
-import '../pages/api_test_page.dart';
+import 'package:insightflo_app/features/news/presentation/providers/news_provider.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/news/presentation/widgets/search_bar_widget.dart';
+import 'package:insightflo_app/features/news/presentation/widgets/news_list_view.dart';
+import 'package:insightflo_app/features/news/presentation/pages/api_test_page.dart';
 
 /// Main news feed screen with search and personalized news
 class NewsFeedScreen extends StatefulWidget {

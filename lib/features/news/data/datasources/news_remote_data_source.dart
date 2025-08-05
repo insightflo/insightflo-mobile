@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../../../core/errors/exceptions.dart';
+import 'package:insightflo_app/core/errors/exceptions.dart';
 import '../models/news_article_model.dart';
 import '../models/user_keyword_model.dart';
 

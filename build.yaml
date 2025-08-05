@@ -1,0 +1,18 @@
+targets:
+  $default:
+    builders:
+      drift_dev:drift_builder:
+        enabled: true
+        options:
+          # Generate named constructors for companions
+          generate_named_constructors: true
+          # Generate manager classes for tables
+          generate_manager: true
+          # Use data classes instead of interfaces
+          use_data_classes: true
+          # Generate JSON serialization methods
+          generate_json: true
+          # Apply int64 support
+          apply_int64_workaround: true
+          # Store date times as Unix timestamps
+          store_date_time_values_as_text: false

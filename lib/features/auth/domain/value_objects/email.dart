@@ -1,7 +1,7 @@
 import 'package:email_validator/email_validator.dart';
 import 'package:equatable/equatable.dart';
 import 'package:dartz/dartz.dart';
-import '../../../../core/errors/failures.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
 
 /// Email value object that encapsulates email validation logic
 /// 

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../features/auth/presentation/providers/auth_provider.dart';
-import '../../../features/news/presentation/providers/theme_provider.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/news/presentation/providers/theme_provider.dart';
 
 /// 스플래시 화면
 /// 
@@ -97,9 +97,11 @@ class _SplashScreenState extends State<SplashScreen>
     
     // 애니메이션 리스너
     _progressController.addListener(() {
-      setState(() {
-        _progress = _progressValue.value;
-      });
+      if (mounted) {
+        setState(() {
+          _progress = _progressValue.value;
+        });
+      }
     });
   }
 
@@ -128,25 +130,33 @@ class _SplashScreenState extends State<SplashScreen>
     ];
     
     for (int i = 0; i < steps.length; i++) {
+      if (!mounted) return; // 위젯이 dispose된 경우 중단
+      
       final (message, task) = steps[i];
       
-      setState(() {
-        _loadingText = message;
-      });
+      if (mounted) {
+        setState(() {
+          _loadingText = message;
+        });
+      }
       
       await task();
       
       // 각 단계별 최소 대기 시간
-      await Future.delayed(const Duration(milliseconds: 400));
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 400));
+      }
     }
   }
 
   Future<void> _initializeTheme() async {
+    if (!mounted) return;
     final themeProvider = context.read<ThemeProvider>();
     await themeProvider.initialize();
   }
 
   Future<void> _checkAuthentication() async {
+    if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
     await authProvider.checkAuthenticationStatus();
   }

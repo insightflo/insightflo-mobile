@@ -1,4 +1,4 @@
-import '../../domain/entities/user.dart';
+import 'package:insightflo_app/features/auth/domain/entities/user.dart';
 
 /// UserModel data transfer object for the User entity
 /// 

@@ -1,4 +1,4 @@
-import '../../domain/entities/keyword_entity.dart';
+import 'package:insightflo_app/features/keywords/domain/entities/keyword_entity.dart';
 
 class KeywordModel extends KeywordEntity {
   const KeywordModel({
@@ -14,8 +14,12 @@ class KeywordModel extends KeywordEntity {
     return KeywordModel(
       id: json['id'] as String,
       userId: json['user_id'] as String,
-      keyword: json['keyword'] as String,
-      weight: (json['weight'] as num).toDouble(),
+      // API의 interest_category를 keyword로 매핑
+      keyword: json['interest_category'] as String? ?? json['keyword'] as String,
+      // API의 priority_level을 weight로 매핑 (1-5를 0.2-1.0으로 변환)
+      weight: json['priority_level'] != null 
+          ? (json['priority_level'] as num).toDouble() / 5.0
+          : (json['weight'] as num?)?.toDouble() ?? 1.0,
       category: json['category'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -34,16 +38,20 @@ class KeywordModel extends KeywordEntity {
 
   Map<String, dynamic> toCreateJson() {
     return {
-      'keyword': keyword,
-      'weight': weight,
+      // API가 기대하는 필드명으로 변환
+      'interest_category': keyword,
+      // weight (0.2-1.0)를 priority_level (1-5)로 변환
+      'priority_level': (weight * 5).round().clamp(1, 5),
       if (category != null) 'category': category,
     };
   }
 
   Map<String, dynamic> toUpdateJson() {
     return {
-      if (keyword.isNotEmpty) 'keyword': keyword,
-      'weight': weight,
+      // API가 기대하는 필드명으로 변환
+      if (keyword.isNotEmpty) 'interest_category': keyword,
+      // weight (0.2-1.0)를 priority_level (1-5)로 변환
+      'priority_level': (weight * 5).round().clamp(1, 5),
       'category': category,
     };
   }
@@ -63,6 +71,17 @@ class KeywordModel extends KeywordEntity {
       weight: weight ?? this.weight,
       category: category ?? this.category,
       createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  factory KeywordModel.fromEntity(KeywordEntity entity) {
+    return KeywordModel(
+      id: entity.id,
+      userId: entity.userId,
+      keyword: entity.keyword,
+      weight: entity.weight,
+      category: entity.category,
+      createdAt: entity.createdAt,
     );
   }
 }

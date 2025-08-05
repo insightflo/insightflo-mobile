@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../news/presentation/providers/theme_provider.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/news/presentation/providers/theme_provider.dart';
 
 /// 프로필 편집 다이얼로그 - Material 3 디자인
 /// 

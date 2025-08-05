@@ -7,6 +7,7 @@ import 'core/monitoring/performance_monitor.dart';
 import 'features/news/presentation/providers/news_provider.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/news/presentation/providers/theme_provider.dart';
+import 'features/keywords/presentation/providers/keyword_provider.dart';
 import 'core/navigation/app_router.dart';
 
 void main() async {
@@ -34,8 +35,27 @@ void main() async {
   }
 }
 
-class InsightFloApp extends StatelessWidget {
+class InsightFloApp extends StatefulWidget {
   const InsightFloApp({super.key});
+
+  @override
+  State<InsightFloApp> createState() => _InsightFloAppState();
+}
+
+class _InsightFloAppState extends State<InsightFloApp> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // 키워드 변경 콜백 설정 - 한 번만 실행
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final keywordProvider = di.sl<KeywordProvider>();
+      final newsProvider = di.sl<NewsProvider>();
+      keywordProvider.setOnKeywordChangedCallback(
+        (userId) => newsProvider.refreshNewsOnKeywordChange(userId),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +66,9 @@ class InsightFloApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<NewsProvider>(
           create: (_) => di.sl<NewsProvider>(),
+        ),
+        ChangeNotifierProvider<KeywordProvider>(
+          create: (_) => di.sl<KeywordProvider>(),
         ),
         ChangeNotifierProvider<ThemeProvider>(
           create: (_) => ThemeProvider()..initialize(),

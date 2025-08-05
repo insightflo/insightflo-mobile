@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import '../errors/failures.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
 
 /// Base use case interface for all use cases in the application
 abstract class UseCase<Type, Params> {
@@ -14,7 +14,7 @@ class NoParams {
 /// Generic parameters class for use cases
 class Params<T> {
   final T data;
-  
+
   const Params({required this.data});
 }
 

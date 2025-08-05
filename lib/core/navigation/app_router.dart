@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/news/presentation/screens/news_home_screen.dart';
-import '../../features/news/presentation/screens/news_detail_screen.dart';
-import '../../features/news/presentation/screens/search_screen.dart';
-import '../../features/news/presentation/screens/bookmarks_screen.dart';
-import '../../features/news/presentation/screens/categories_screen.dart';
-import '../../features/profile/presentation/screens/profile_screen.dart';
-import '../../features/settings/presentation/screens/settings_screen.dart';
-import '../../features/auth/presentation/providers/auth_provider.dart';
-import '../presentation/screens/main_wrapper_screen.dart';
-import '../presentation/screens/splash_screen.dart';
-import '../presentation/screens/onboarding_screen.dart';
-import '../presentation/screens/error_screen.dart';
+import 'package:insightflo_app/features/news/presentation/screens/news_home_screen.dart';
+import 'package:insightflo_app/features/news/presentation/screens/news_detail_screen.dart';
+import 'package:insightflo_app/features/news/presentation/screens/search_screen.dart';
+import 'package:insightflo_app/features/news/presentation/screens/bookmarks_screen.dart';
+import 'package:insightflo_app/features/news/presentation/screens/categories_screen.dart';
+import 'package:insightflo_app/features/profile/presentation/screens/profile_screen.dart';
+import 'package:insightflo_app/features/settings/presentation/screens/settings_screen.dart';
+import 'package:insightflo_app/features/keywords/presentation/screens/keyword_management_screen.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/core/presentation/screens/main_wrapper_screen.dart';
+import 'package:insightflo_app/core/presentation/screens/simple_splash_screen.dart';
+import 'package:insightflo_app/core/presentation/screens/onboarding_screen.dart';
+import 'package:insightflo_app/core/presentation/screens/error_screen.dart';
 import 'route_transitions.dart' as transitions;
-import '../../features/news/domain/entities/news_entity.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_entity.dart';
 
 /// go_router 기반 앱 라우터 구성
 ///
@@ -35,13 +36,13 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     // 라우터 설정
     debugLogDiagnostics: true,
-    initialLocation: '/home',
+    initialLocation: '/splash',
 
     // 전역 리다이렉션 로직
     redirect: (context, state) => _handleGlobalRedirect(context, state),
 
     // 리다이렉션 제한 (무한 루프 방지)
-    redirectLimit: 5,
+    redirectLimit: 10,
 
     // 라우트 정의
     routes: [
@@ -51,6 +52,7 @@ class AppRouter {
       _buildNewsDetailRoute(),
       _buildSearchRoute(),
       _buildSettingsRoute(),
+      _buildKeywordManagementRoute(),
       _buildErrorRoute(),
     ],
 
@@ -66,25 +68,82 @@ class AppRouter {
 
   /// 전역 리다이렉션 핸들러
   String? _handleGlobalRedirect(BuildContext context, GoRouterState state) {
-    final isAuthenticated = _authProvider.isAuthenticated;
-    final isOnboarded = _authProvider.isOnboarded;
     final currentLocation = state.uri.toString();
+    
+    // 스택 트레이스 출력
+    debugPrint('🚦 ===== REDIRECT CHECK START =====');
+    debugPrint('🚦 Location: $currentLocation');
+    debugPrint('🚦 Stack trace:');
+    debugPrintStack(maxFrames: 10);
+    
+    // 키워드 화면이면 어떤 경우에도 리다이렉트하지 않음
+    if (currentLocation.startsWith('/keywords')) {
+      debugPrint('🚦 KEYWORDS SCREEN DETECTED - SKIP ALL REDIRECTS');
+      debugPrint('🚦 ===== REDIRECT CHECK END =====');
+      return null;
+    }
+    
+    debugPrint('🚦 Auth State:');
+    debugPrint('   - isLoading: ${_authProvider.isLoading}');
+    debugPrint('   - isInitialized: ${_authProvider.isInitialized}');
+    debugPrint('   - isAuthenticated: ${_authProvider.isAuthenticated}');
+    debugPrint('   - isOnboarded: ${_authProvider.isOnboarded}');
 
-    // 스플래시 화면은 항상 허용
-    if (currentLocation == '/splash') {
+    // 온보딩 화면 처리
+    if (currentLocation == '/onboarding') {
+      debugPrint('   → Allowing onboarding screen');
       return null;
     }
 
+    // 메인 앱 화면들 허용
+    final mainAppPaths = ['/home', '/categories', '/bookmarks', '/profile', '/search', '/settings'];
+    if (mainAppPaths.any((path) => currentLocation.startsWith(path))) {
+      debugPrint('   → Allowing main app screen');
+      return null;
+    }
+
+    // 스플래시 화면 처리 - 초기화가 완료되었다면 홈으로 이동
+    if (currentLocation.startsWith('/splash')) {
+      if (_authProvider.isInitialized) {
+        if (_authProvider.isOnboarded) {
+          debugPrint('   → Splash screen: redirecting to home (initialized and onboarded)');
+          debugPrint('🚦 ===== REDIRECT CHECK END (redirecting to /home) =====');
+          return '/home';
+        } else {
+          debugPrint('   → Splash screen: redirecting to onboarding (not onboarded)');
+          debugPrint('🚦 ===== REDIRECT CHECK END (redirecting to /onboarding) =====');
+          return '/onboarding';
+        }
+      } else {
+        debugPrint('   → Allowing splash screen (not initialized yet)');
+        debugPrint('🚦 ===== REDIRECT CHECK END (no redirect) =====');
+        return null;
+      }
+    }
+
+    // 초기화가 완료되지 않은 경우에만 스플래시로 리다이렉트
+    if (!_authProvider.isInitialized) {
+      debugPrint('   → Redirecting to splash (not initialized)');
+      return '/splash';
+    }
+
+    final isAuthenticated = _authProvider.isAuthenticated;
+    final isOnboarded = _authProvider.isOnboarded;
+
     // 온보딩이 완료되지 않은 경우
-    if (!isOnboarded && currentLocation != '/onboarding') {
+    if (!isOnboarded) {
+      debugPrint('   → Redirecting to onboarding (not onboarded)');
       return '/onboarding';
     }
 
     // 인증이 필요한 라우트 체크
     if (_requiresAuthentication(currentLocation) && !isAuthenticated) {
+      debugPrint('   → Redirecting to onboarding (auth required)');
       return '/onboarding';
     }
 
+    debugPrint('   → No redirect needed');
+    debugPrint('🚦 ===== REDIRECT CHECK END (no redirect) =====');
     return null;
   }
 
@@ -99,8 +158,10 @@ class AppRouter {
     return GoRoute(
       path: '/splash',
       name: 'splash',
-      pageBuilder: (context, state) =>
-          MaterialPage(key: state.pageKey, child: const SplashScreen()),
+      pageBuilder: (context, state) => MaterialPage(
+        key: state.pageKey, 
+        child: const SimpleSplashScreen(),
+      ),
     );
   }
 
@@ -174,6 +235,7 @@ class AppRouter {
             child: const ProfileScreen(),
           ),
         ),
+
       ],
     );
   }
@@ -273,6 +335,18 @@ class AppRouter {
     );
   }
 
+  /// 키워드 관리 화면 라우트 (독립적)
+  GoRoute _buildKeywordManagementRoute() {
+    return GoRoute(
+      path: '/keywords',
+      name: 'keywords',
+      pageBuilder: (context, state) => MaterialPage(
+        key: state.pageKey,
+        child: const KeywordManagementScreen(),
+      ),
+    );
+  }
+
   /// 에러 화면 라우트
   GoRoute _buildErrorRoute() {
     return GoRoute(
@@ -327,6 +401,12 @@ class NavigationObserver extends NavigatorObserver {
       '🧭 Navigation $action: ${route.settings.name ?? 'Unknown'} '
       '${previousRoute != null ? 'from ${previousRoute.settings.name ?? 'Unknown'}' : ''}',
     );
+    
+    // 스플래시 화면 네비게이션일 경우 스택 트레이스 출력
+    if (route.settings.name == 'splash' || route.settings.name?.contains('splash') == true) {
+      debugPrint('🚨 SPLASH NAVIGATION DETECTED - Stack trace:');
+      debugPrintStack(maxFrames: 15);
+    }
   }
 }
 
@@ -360,6 +440,11 @@ extension AppRouterExtension on GoRouter {
   /// 북마크 화면으로 이동
   void goToBookmarks() {
     go('/bookmarks');
+  }
+
+  /// 키워드 관리 화면으로 이동
+  void goToKeywordManagement() {
+    go('/keywords');
   }
 
   /// 메인 탭으로 이동 (바텀 네비게이션)

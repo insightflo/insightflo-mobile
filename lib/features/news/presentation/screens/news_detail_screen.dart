@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../domain/entities/news_entity.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_entity.dart';
 
 /// 뉴스 기사의 상세 정보를 보여주는 화면
 class NewsDetailScreen extends StatelessWidget {

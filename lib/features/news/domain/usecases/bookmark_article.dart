@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/errors/failures.dart';
-import '../../../../core/usecases/usecase.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
+import 'package:insightflo_app/core/usecases/usecase.dart';
 import '../repositories/news_repository.dart';
 
 /// Use case for bookmarking news articles

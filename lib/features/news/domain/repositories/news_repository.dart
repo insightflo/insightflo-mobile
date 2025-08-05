@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/errors/failures.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
 import '../entities/news_article.dart';
 import '../entities/user_keyword.dart';
 

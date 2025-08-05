@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../features/news/presentation/screens/news_feed_screen.dart';
+import 'package:insightflo_app/features/news/presentation/screens/news_feed_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

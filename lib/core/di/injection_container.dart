@@ -5,30 +5,41 @@ import 'package:http/http.dart' as http;
 // Removed Supabase import - using API-First architecture
 
 // Core
-import '../database/database.dart';
-import '../utils/network_info.dart';
-import '../services/deep_link_service.dart';
-import '../services/auth_flow_manager.dart';
-import '../services/api_auth_service.dart';
-import '../monitoring/performance_monitor.dart';
-// import '../cache/cache_service.dart'; // CacheService는 database.dart에서 이미 export됨
+import 'package:insightflo_app/core/database/database.dart';
+import 'package:insightflo_app/core/utils/network_info.dart';
+import 'package:insightflo_app/core/services/deep_link_service.dart';
+import 'package:insightflo_app/core/services/auth_flow_manager.dart';
+import 'package:insightflo_app/core/services/api_auth_service.dart';
+import 'package:insightflo_app/core/monitoring/performance_monitor.dart';
+// import 'package:insightflo_app/core/cache/cache_service.dart'; // CacheService는 database.dart에서 이미 export됨
 
 // Features - News
-import '../../features/news/data/datasources/news_remote_data_source.dart';
-import '../../features/news/data/datasources/news_local_data_source.dart';
-import '../../features/news/data/repositories/news_repository_impl.dart';
-import '../../features/news/domain/repositories/news_repository.dart';
-import '../../features/news/domain/usecases/get_personalized_news.dart';
-import '../../features/news/domain/usecases/search_news.dart';
-import '../../features/news/domain/usecases/bookmark_article.dart';
-import '../../features/news/presentation/providers/news_provider.dart';
+import 'package:insightflo_app/features/news/data/datasources/news_remote_data_source.dart';
+import 'package:insightflo_app/features/news/data/datasources/news_local_data_source.dart';
+import 'package:insightflo_app/features/news/data/repositories/news_repository_impl.dart';
+import 'package:insightflo_app/features/news/domain/repositories/news_repository.dart';
+import 'package:insightflo_app/features/news/domain/usecases/get_personalized_news.dart';
+import 'package:insightflo_app/features/news/domain/usecases/search_news.dart';
+import 'package:insightflo_app/features/news/domain/usecases/bookmark_article.dart';
+import 'package:insightflo_app/features/news/presentation/providers/news_provider.dart';
 
 // Features - Auth
-import '../../features/auth/data/datasources/auth_remote_data_source.dart';
-import '../../features/auth/data/repositories/auth_repository_impl.dart';
-import '../../features/auth/domain/repositories/auth_repository.dart';
-import '../../features/auth/domain/usecases/usecases.dart';
-import '../../features/auth/presentation/providers/auth_provider.dart';
+import 'package:insightflo_app/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:insightflo_app/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:insightflo_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:insightflo_app/features/auth/domain/usecases/usecases.dart';
+import 'package:insightflo_app/features/auth/presentation/providers/auth_provider.dart';
+
+// Features - Keywords
+import 'package:insightflo_app/features/keywords/data/datasources/keyword_local_data_source.dart';
+import 'package:insightflo_app/features/keywords/data/repositories/keyword_repository_impl.dart';
+import 'package:insightflo_app/features/keywords/domain/repositories/keyword_repository.dart';
+import 'package:insightflo_app/features/keywords/domain/usecases/get_keywords.dart';
+import 'package:insightflo_app/features/keywords/domain/usecases/create_keyword.dart';
+import 'package:insightflo_app/features/keywords/domain/usecases/update_keyword.dart';
+import 'package:insightflo_app/features/keywords/domain/usecases/delete_keyword.dart';
+import 'package:insightflo_app/features/keywords/domain/usecases/search_keyword_suggestions.dart';
+import 'package:insightflo_app/features/keywords/presentation/providers/keyword_provider.dart';
 
 /// Service locator instance
 final sl = GetIt.instance;
@@ -40,6 +51,9 @@ Future<void> init() async {
 
   //! Features - News
   await _initNews();
+
+  //! Features - Keywords
+  await _initKeywords();
 
   //! Core
   await _initCore();
@@ -96,6 +110,7 @@ Future<void> _initNews() async {
       bookmarkArticle: sl(),
       localDataSource: sl(),
       authProvider: sl(),
+      keywordProvider: sl(),
       authService: sl(),
     ),
   );
@@ -122,6 +137,42 @@ Future<void> _initNews() async {
 
   sl.registerLazySingleton<NewsLocalDataSource>(
     () => NewsLocalDataSourceImpl(database: sl()),
+  );
+}
+
+/// Initialize Keywords feature dependencies
+Future<void> _initKeywords() async {
+  // Providers
+  sl.registerFactory(
+    () => KeywordProvider(
+      getKeywords: sl(),
+      createKeyword: sl(),
+      updateKeyword: sl(),
+      deleteKeyword: sl(),
+      searchKeywordSuggestions: sl(),
+      authProvider: sl(),
+    ),
+  );
+
+  // Use cases
+  sl.registerLazySingleton(() => GetKeywords(sl()));
+  sl.registerLazySingleton(() => CreateKeyword(sl()));
+  sl.registerLazySingleton(() => UpdateKeyword(sl()));
+  sl.registerLazySingleton(() => DeleteKeyword(sl()));
+  sl.registerLazySingleton(() => SearchKeywordSuggestions(sl()));
+
+  // Repository
+  sl.registerLazySingleton<KeywordRepository>(
+    () => KeywordRepositoryImpl(
+      localDataSource: sl(),
+    ),
+  );
+
+  // Data sources
+  sl.registerLazySingleton<KeywordLocalDataSource>(
+    () => KeywordLocalDataSourceImpl(
+      database: sl(),
+    ),
   );
 }
 

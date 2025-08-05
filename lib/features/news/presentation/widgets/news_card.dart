@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../domain/entities/news_entity.dart';
-import '../providers/news_provider.dart';
+import 'package:insightflo_app/features/news/domain/entities/news_entity.dart';
+import 'package:insightflo_app/features/news/presentation/providers/news_provider.dart';
 
 /// Custom widget for displaying news article cards
 class NewsCard extends StatelessWidget {

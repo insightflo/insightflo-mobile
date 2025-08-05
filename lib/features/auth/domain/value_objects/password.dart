@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:dartz/dartz.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
-import '../../../../core/errors/failures.dart';
+import 'package:insightflo_app/core/errors/failures.dart';
 
 /// Password value object that encapsulates password validation and security logic
 /// 

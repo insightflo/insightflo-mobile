@@ -15,5 +15,5 @@ export 'tables/sync_metadata_table.dart';
 // export 'migrations/migration_utils.dart';
 
 // Cache system exports
-export '../cache/api_cache_manager.dart';
-export '../cache/cache_service.dart';
+export 'package:insightflo_app/core/cache/api_cache_manager.dart';
+export 'package:insightflo_app/core/cache/cache_service.dart';
